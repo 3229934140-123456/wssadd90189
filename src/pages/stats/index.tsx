@@ -25,7 +25,7 @@ const gradeDescriptions: Record<string, string> = {
 };
 
 const StatsPage: React.FC = () => {
-  const { userProgress, getMistakeStats, getRealDepartmentStats, trainingTasks, levels } = useLearning();
+  const { userProgress, getMistakeStats, getRealDepartmentStats, trainingTasks, levels, getTaskDepartmentStats } = useLearning();
   const [viewMode, setViewMode] = useState<'personal' | 'department' | 'task'>('personal');
 
   const accuracy = userProgress.totalAnswered > 0
@@ -323,41 +323,18 @@ const StatsPage: React.FC = () => {
           ) : (
             trainingTasks.map((task: TrainingTask) => {
               const isExpired = task.deadline < Date.now();
-              const taskDeptStats = task.departments.reduce<Record<string, DeptStats>>((acc, dept) => {
-                if (dept === 'all') {
-                  const merged: DeptStats = { totalAnswered: 0, totalCorrect: 0, completedLevels: 0, categoryErrors: {} };
-                  Object.values(realStats).forEach(ds => {
-                    merged.totalAnswered += ds.totalAnswered || 0;
-                    merged.totalCorrect += ds.totalCorrect || 0;
-                    Object.entries(ds.categoryErrors || {}).forEach(([k, v]) => {
-                      merged.categoryErrors[k] = (merged.categoryErrors[k] || 0) + v;
-                    });
-                  });
-                  merged.completedLevels = Math.min(
-                    Object.values(realStats).reduce((s, d) => s + (d.completedLevels || 0), 0),
-                    task.levelIds.length
-                  );
-                  acc.all = merged;
-                } else {
-                  const ds = realStats[dept];
-                  if (ds) {
-                    acc[dept] = {
-                      ...ds,
-                      completedLevels: Math.min(ds.completedLevels || 0, task.levelIds.length)
-                    };
-                  }
-                }
-                return acc;
-              }, {});
+              const taskDeptStats = getTaskDepartmentStats(task.id);
 
-              const taskTotalCompletedLevels = Object.values(taskDeptStats).reduce((s, d) => s + (d.completedLevels || 0), 0);
-              const taskTotalAnswered = Object.values(taskDeptStats).reduce((s, d) => s + (d.totalAnswered || 0), 0);
-              const taskTotalCorrect = Object.values(taskDeptStats).reduce((s, d) => s + (d.totalCorrect || 0), 0);
-              const taskAvgScore = taskTotalAnswered > 0 ? Math.round((taskTotalCorrect / taskTotalAnswered) * 100) : 0;
+              const deptValues = Object.values(taskDeptStats);
+              const taskTotalCompleted = deptValues.reduce((s, d) => s + d.completedLevels, 0);
+              const taskTotalAnswered = deptValues.reduce((s, d) => s + d.totalAnswered, 0);
+              const taskAvgScore = deptValues.length > 0
+                ? Math.round(deptValues.reduce((s, d) => s + d.avgScore, 0) / deptValues.length)
+                : 0;
 
               const categoryMerged: Record<string, number> = {};
-              Object.values(taskDeptStats).forEach(ds => {
-                Object.entries(ds.categoryErrors || {}).forEach(([k, v]) => {
+              deptValues.forEach(ds => {
+                Object.entries(ds.categoryErrors).forEach(([k, v]) => {
                   categoryMerged[k] = (categoryMerged[k] || 0) + v;
                 });
               });
@@ -386,8 +363,8 @@ const StatsPage: React.FC = () => {
                   </View>
                   <View className={styles.statsGrid} style={{ padding: 0, marginBottom: '24rpx' }}>
                     <StatCard value={Object.keys(taskDeptStats).length} label="覆盖部门" unit="个" />
-                    <StatCard value={taskAvgScore} label="平均得分" unit="%" color={taskAvgScore >= 80 ? 'success' : taskAvgScore >= 60 ? 'warning' : 'danger'} />
-                    <StatCard value={taskTotalCompletedLevels} label="累计通关" unit="关次" color="primary" />
+                    <StatCard value={taskAvgScore} label="部门平均分" unit="分" color={taskAvgScore >= 80 ? 'success' : taskAvgScore >= 60 ? 'warning' : 'danger'} />
+                    <StatCard value={taskTotalCompleted} label="累计通关" unit="关次" color="primary" />
                     <StatCard value={taskTotalAnswered} label="累计答题" unit="道" color="warning" />
                   </View>
 
@@ -418,12 +395,11 @@ const StatsPage: React.FC = () => {
                     </Text>
                   ) : (
                     Object.entries(taskDeptStats).map(([deptKey, ds]) => {
-                      const deptName = deptKey === 'all' ? '全员合计' : DEPARTMENT_NAMES[deptKey as DepartmentType] || deptKey;
-                      const deptAccuracy = ds.totalAnswered > 0 ? Math.round((ds.totalCorrect / ds.totalAnswered) * 100) : 0;
+                      const deptName = DEPARTMENT_NAMES[deptKey as DepartmentType] || deptKey;
                       const levelCompletionPct = task.levelIds.length > 0
-                        ? Math.round(((ds.completedLevels || 0) / task.levelIds.length) * 100)
+                        ? Math.round((ds.completedLevels / task.levelIds.length) * 100)
                         : 0;
-                      const deptWeak = Object.entries(ds.categoryErrors || {})
+                      const deptWeak = Object.entries(ds.categoryErrors)
                         .map(([cat, cnt]) => ({
                           category: cat,
                           name: CATEGORY_KNOWLEDGE.find(c => c.key === cat)?.name || cat,
@@ -437,7 +413,7 @@ const StatsPage: React.FC = () => {
                           <View className={styles.departmentHeader}>
                             <Text className={styles.departmentName}>{deptName}</Text>
                             <Text className={styles.departmentMeta}>
-                              平均分 {deptAccuracy}% · 通关 {ds.completedLevels || 0}/{task.levelIds.length}关
+                              平均分 {ds.avgScore}分 · 通关 {ds.completedLevels}/{task.levelIds.length}关
                             </Text>
                           </View>
                           <View className={styles.departmentProgress}>
@@ -455,19 +431,26 @@ const StatsPage: React.FC = () => {
                               {task.levelIds.map(lid => {
                                 const lv = levels.find(l => l.id === lid);
                                 const lvTitle = lv ? lv.title : lid;
-                                const userCompleted = userProgress.completedLevels.includes(lid);
+                                const detail = ds.levelDetails[lid];
+                                const deptPassed = detail?.completed ?? false;
+                                const deptScore = detail?.bestScore || 0;
                                 return (
                                   <View
                                     key={lid}
                                     style={{
                                       padding: '6rpx 16rpx',
                                       borderRadius: '20rpx',
-                                      fontSize: '22rpx',
-                                      background: userCompleted ? '#D1FAE5' : '#F1F5F9',
-                                      color: userCompleted ? '#065F46' : '#64748B'
+                                      background: deptPassed ? '#D1FAE5' : '#F1F5F9',
                                     }}
                                   >
-                                    <Text>{lvTitle} {userCompleted ? '✓' : ''}</Text>
+                                    <Text style={{ fontSize: '22rpx', color: deptPassed ? '#065F46' : '#64748B', display: 'block' }}>
+                                      {lvTitle} {deptPassed ? '✓' : ''}
+                                    </Text>
+                                    {deptScore > 0 && (
+                                      <Text style={{ fontSize: '20rpx', color: deptPassed ? '#10B981' : '#F59E0B', display: 'block', marginTop: '2rpx', textAlign: 'center' }}>
+                                      {deptScore}分
+                                    </Text>
+                                    )}
                                   </View>
                                 );
                               })}

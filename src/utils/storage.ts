@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
   LEVELS: 'compliance_levels',
   MISTAKES: 'compliance_mistakes',
   CURRENT_VERSION: 'compliance_current_version',
+  USER_DEPARTMENT: 'compliance_user_department',
+  LEVEL_BEST_SCORES: 'compliance_level_best_scores',
   MISTAKES_FILTER: 'compliance_mistakes_filter',
   DEPARTMENT_STATS: 'compliance_department_stats',
   ANSWER_HISTORY: 'compliance_answer_history',
@@ -194,6 +196,58 @@ export const storage = {
       console.log('[Storage] Saved current version:', version);
     } catch (e) {
       console.error('[Storage] setCurrentVersion error:', e);
+    }
+  },
+
+  getUserDepartment: (): DepartmentType => {
+    try {
+      const data = Taro.getStorageSync(STORAGE_KEYS.USER_DEPARTMENT);
+      return data || 'all';
+    } catch (e) {
+      console.error('[Storage] getUserDepartment error:', e);
+      return 'all';
+    }
+  },
+
+  setUserDepartment: (dept: DepartmentType): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.USER_DEPARTMENT, dept);
+      console.log('[Storage] Saved user department:', dept);
+    } catch (e) {
+      console.error('[Storage] setUserDepartment error:', e);
+    }
+  },
+
+  getLevelBestScores: (): Record<string, number> => {
+    try {
+      const data = Taro.getStorageSync(STORAGE_KEYS.LEVEL_BEST_SCORES);
+      return data ? JSON.parse(data) : {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  setLevelBestScores: (scores: Record<string, number>): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.LEVEL_BEST_SCORES, JSON.stringify(scores));
+    } catch (e) {
+      console.error('[Storage] setLevelBestScores error:', e);
+    }
+  },
+
+  getLevelBestScore: (levelId: string, department: DepartmentType | string): number => {
+    const scores = storage.getLevelBestScores();
+    const key = `${department}_${levelId}`;
+    return scores[key] || 0;
+  },
+
+  setLevelBestScore: (levelId: string, department: DepartmentType | string, score: number): void => {
+    const scores = storage.getLevelBestScores();
+    const key = `${department}_${levelId}`;
+    const current = scores[key] || 0;
+    if (score > current) {
+      scores[key] = score;
+      storage.setLevelBestScores(scores);
     }
   },
 

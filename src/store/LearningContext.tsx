@@ -26,6 +26,7 @@ interface LearningContextType {
   questions: Question[];
   levels: Level[];
   currentVersion: DepartmentType;
+  userDepartment: DepartmentType;
   currentLevelAnswers: { questionId: string; isCorrect: boolean; category: KnowledgeCategory }[];
   trainingTasks: TrainingTask[];
   reviewRecords: ReviewRecord[];
@@ -40,7 +41,9 @@ interface LearningContextType {
   completeCurrentLevel: (score: number) => void;
 
   setCurrentVersion: (version: DepartmentType) => void;
+  setUserDepartment: (dept: DepartmentType) => void;
   getFilteredQuestions: (levelId: string) => Question[];
+  getLevelBestScore: (levelId: string, department?: DepartmentType) => number;
 
   addQuestion: (question: Question) => void;
   updateQuestion: (question: Question) => void;
@@ -49,12 +52,22 @@ interface LearningContextType {
   getWeakKnowledge: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
   getWeakKnowledgeFromSession: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
   getRealDepartmentStats: () => any;
+  getTaskDepartmentStats: (taskId: string) => Record<string, {
+    totalAnswered: number;
+    totalCorrect: number;
+    completedLevels: number;
+    avgScore: number;
+    categoryErrors: Record<string, number>;
+    levelDetails: Record<string, { completed: boolean; bestScore: number }>;
+  }>;
 
   addTrainingTask: (task: TrainingTask) => void;
   deleteTrainingTask: (taskId: string) => void;
   getActiveTasksForVersion: (version: DepartmentType) => TrainingTask[];
+  getActiveTasksForUser: () => TrainingTask[];
   getTaskLevels: (taskId: string) => string[];
   isLevelInAnyTask: (levelId: string, version: DepartmentType) => boolean;
+  getTaskCompletedCount: (taskId: string, department?: DepartmentType) => number;
 
   recordReview: (questionId: string, category: KnowledgeCategory, mastered: boolean) => void;
   getReviewRecord: (questionId: string) => ReviewRecord | undefined;
@@ -86,6 +99,10 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [currentVersion, setCurrentVersionState] = useState<DepartmentType>(() => {
     return storage.getCurrentVersion();
+  });
+
+  const [userDepartment, setUserDepartmentState] = useState<DepartmentType>(() => {
+    return storage.getUserDepartment();
   });
 
   const [trainingTasks, setTrainingTasks] = useState<TrainingTask[]>(() => {
@@ -128,6 +145,10 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     storage.setCurrentVersion(currentVersion);
   }, [currentVersion]);
+
+  useEffect(() => {
+    storage.setUserDepartment(userDepartment);
+  }, [userDepartment]);
 
   useEffect(() => {
     if (trainingTasks.length >= 0) {
@@ -218,6 +239,8 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
   const completeCurrentLevel = useCallback((score: number) => {
     if (!currentLevelId) return;
 
+    storage.setLevelBestScore(currentLevelId, currentVersion, score);
+
     const newLevels = [...levels];
     const currentIdx = newLevels.findIndex(l => l.id === currentLevelId);
     if (currentIdx >= 0) {
@@ -245,10 +268,10 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
         };
       });
     }
-    console.log('[Learning] Level completed:', currentLevelId, 'score:', score);
+    console.log('[Learning] Level completed:', currentLevelId, 'score:', score, 'version:', currentVersion);
     storage.recordLevelCompletion(currentLevelId, currentVersion, score);
     Taro.showToast({ title: '进度已保存', icon: 'success' });
-  }, [currentLevelId, levels]);
+  }, [currentLevelId, levels, currentVersion]);
 
   const nextQuestion = useCallback(() => {
     setCurrentQuestionIndex(prev => prev + 1);
@@ -276,6 +299,16 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCurrentVersionState(version);
     console.log('[Learning] Version changed:', version);
   }, []);
+
+  const setUserDepartment = useCallback((dept: DepartmentType) => {
+    setUserDepartmentState(dept);
+    console.log('[Learning] User department changed:', dept);
+  }, []);
+
+  const getLevelBestScore = useCallback((levelId: string, department?: DepartmentType): number => {
+    const dept = department || currentVersion;
+    return storage.getLevelBestScore(levelId, dept);
+  }, [currentVersion]);
 
   const getMistakeStats = useCallback(() => {
     const stats: { [key: string]: number } = {};
@@ -389,6 +422,88 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
     return baseStats;
   }, []);
 
+  const getTaskDepartmentStats = useCallback((taskId: string) => {
+    const task = trainingTasks.find(t => t.id === taskId);
+    if (!task) return {};
+
+    const result: Record<string, {
+      totalAnswered: number;
+      totalCorrect: number;
+      completedLevels: number;
+      avgScore: number;
+      categoryErrors: Record<string, number>;
+      levelDetails: Record<string, { completed: boolean; bestScore: number }>;
+    }> = {};
+
+    const levelSet = new Set(task.levelIds);
+    const history = storage.getAnswerHistory();
+    const completions = storage.getLevelCompletions();
+
+    const deptList = task.departments.includes('all')
+      ? ['sales', 'hr', 'customerService']
+      : task.departments;
+
+    deptList.forEach(dept => {
+      const levelDetails: Record<string, { completed: boolean; bestScore: number }> = {};
+      task.levelIds.forEach(lid => {
+        levelDetails[lid] = { completed: false, bestScore: 0 };
+      });
+
+      let totalScoreAll = 0;
+      let levelCompleteCount = 0;
+
+      completions
+        .filter(c => c.department === dept && levelSet.has(c.levelId))
+        .forEach(c => {
+          const lid = c.levelId;
+          if (!levelDetails[lid]) levelDetails[lid] = { completed: false, bestScore: 0 };
+          if (c.score > levelDetails[lid].bestScore) {
+            levelDetails[lid].bestScore = c.score;
+          }
+        });
+
+      task.levelIds.forEach(lid => {
+        const bestScore = storage.getLevelBestScore(lid, dept);
+        if (bestScore > (levelDetails[lid]?.bestScore || 0)) {
+          levelDetails[lid] = { completed: bestScore > 0, bestScore };
+        }
+        if (levelDetails[lid].bestScore >= task.passingScore) {
+          levelDetails[lid].completed = true;
+          levelCompleteCount += 1;
+          totalScoreAll += levelDetails[lid].bestScore;
+        } else if (levelDetails[lid].bestScore > 0) {
+          totalScoreAll += levelDetails[lid].bestScore;
+        }
+      });
+
+      const deptQuestions = questions.filter(q => levelSet.has(q.levelId) && (q.department === dept || q.department === 'all'));
+      const deptQuestionIds = new Set(deptQuestions.map(q => q.id));
+      const filteredHistory = history.filter(h => h.department === dept && deptQuestionIds.has(h.questionId));
+
+      const totalAnswered = filteredHistory.length;
+      const totalCorrect = filteredHistory.filter(h => h.isCorrect).length;
+      const avgScore = task.levelIds.length > 0 ? Math.round(totalScoreAll / task.levelIds.length) : 0;
+
+      const categoryErrors: Record<string, number> = {};
+      filteredHistory.forEach(h => {
+        if (!h.isCorrect) {
+          categoryErrors[h.category] = (categoryErrors[h.category] || 0) + 1;
+        }
+      });
+
+      result[dept] = {
+        totalAnswered,
+        totalCorrect,
+        completedLevels: levelCompleteCount,
+        avgScore,
+        categoryErrors,
+        levelDetails
+      };
+    });
+
+    return result;
+  }, [trainingTasks, questions]);
+
   const addTrainingTask = useCallback((task: TrainingTask) => {
     setTrainingTasks(prev => [task, ...prev]);
     console.log('[Learning] Training task added:', task.id);
@@ -406,6 +521,28 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       t.deadline > now
     );
   }, [trainingTasks]);
+
+  const getActiveTasksForUser = useCallback((): TrainingTask[] => {
+    const now = Date.now();
+    return trainingTasks.filter(t =>
+      (t.departments.includes(userDepartment) || t.departments.includes('all')) &&
+      t.deadline > now
+    );
+  }, [trainingTasks, userDepartment]);
+
+  const getTaskCompletedCount = useCallback((taskId: string, department?: DepartmentType): number => {
+    const task = trainingTasks.find(t => t.id === taskId);
+    if (!task) return 0;
+    const dept = department || userDepartment;
+    let count = 0;
+    task.levelIds.forEach(levelId => {
+      const score = storage.getLevelBestScore(levelId, dept);
+      if (score >= task.passingScore) {
+        count += 1;
+      }
+    });
+    return count;
+  }, [trainingTasks, userDepartment]);
 
   const getTaskLevels = useCallback((taskId: string): string[] => {
     const task = trainingTasks.find(t => t.id === taskId);
@@ -440,6 +577,7 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       questions,
       levels,
       currentVersion,
+      userDepartment,
       currentLevelAnswers,
       trainingTasks,
       reviewRecords,
@@ -452,18 +590,23 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       getMistakeStats,
       completeCurrentLevel,
       setCurrentVersion,
+      setUserDepartment,
       getFilteredQuestions,
+      getLevelBestScore,
       addQuestion,
       updateQuestion,
       deleteQuestion,
       getWeakKnowledge,
       getWeakKnowledgeFromSession,
       getRealDepartmentStats,
+      getTaskDepartmentStats,
       addTrainingTask,
       deleteTrainingTask,
       getActiveTasksForVersion,
+      getActiveTasksForUser,
       getTaskLevels,
       isLevelInAnyTask,
+      getTaskCompletedCount,
       recordReview,
       getReviewRecord
     }}>

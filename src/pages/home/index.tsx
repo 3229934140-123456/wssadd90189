@@ -10,7 +10,7 @@ import { calculateGrade, getGradeColor } from '@/utils';
 import { formatTimestamp } from '@/utils';
 
 const HomePage: React.FC = () => {
-  const { userProgress, mistakes, levels, getRealDepartmentStats, currentVersion, getActiveTasksForVersion } = useLearning();
+  const { userProgress, mistakes, levels, getRealDepartmentStats, userDepartment, getActiveTasksForUser, getTaskCompletedCount, getLevelBestScore } = useLearning();
 
   const accuracy = userProgress.totalAnswered > 0
     ? Math.round((userProgress.totalCorrect / userProgress.totalAnswered) * 100)
@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
     return Math.round((totalCorrect / totalAnswered) * 100);
   }, [getRealDepartmentStats]);
 
-  const activeTasks = useMemo(() => getActiveTasksForVersion(currentVersion), [getActiveTasksForVersion, currentVersion]);
+  const activeTasks = useMemo(() => getActiveTasksForUser(), [getActiveTasksForUser]);
 
   const handleLevelClick = (levelId: string) => {
     const level = levels.find(l => l.id === levelId);
@@ -93,8 +93,8 @@ const HomePage: React.FC = () => {
         <View className={styles.taskSection}>
           <Text className={styles.taskTitle}>📌 待完成培训任务</Text>
           {activeTasks.map(task => {
-            const completedCount = task.levelIds.filter(id => userProgress.completedLevels.includes(id)).length;
-            const pct = Math.round((completedCount / task.levelIds.length) * 100);
+            const completedCount = getTaskCompletedCount(task.id, userDepartment);
+            const pct = task.levelIds.length > 0 ? Math.round((completedCount / task.levelIds.length) * 100) : 0;
             return (
               <View key={task.id} className={styles.taskCard}>
                 <View className={styles.taskCardHeader}>
@@ -102,7 +102,12 @@ const HomePage: React.FC = () => {
                   <Text className={styles.taskCardDeadline}>截止 {formatTimestamp(task.deadline).split(' ')[0]}</Text>
                 </View>
                 {task.description && <Text className={styles.taskCardDesc}>{task.description}</Text>}
-                <View style={{ marginTop: '16rpx' }}>
+                <View style={{ marginTop: '12rpx' }}>
+                  <Text style={{ fontSize: '22rpx', color: '#64748B' }}>
+                    分数线 {task.passingScore} 分 · 完成 {completedCount}/{task.levelIds.length} 关
+                  </Text>
+                </View>
+                <View style={{ marginTop: '12rpx' }}>
                   <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8rpx' }}>
                     <Text style={{ fontSize: '24rpx', color: '#64748B' }}>
                       进度 {completedCount}/{task.levelIds.length}
@@ -114,17 +119,23 @@ const HomePage: React.FC = () => {
                 <View style={{ marginTop: '16rpx', display: 'flex', gap: '12rpx', flexWrap: 'wrap' }}>
                   {task.levelIds.map(lid => {
                     const lv = levels.find(l => l.id === lid);
-                    const done = userProgress.completedLevels.includes(lid);
+                    const score = getLevelBestScore(lid, userDepartment);
+                    const passed = score >= task.passingScore;
                     return (
                       <View
                         key={lid}
                         className={styles.taskLevelTag}
-                        style={{ opacity: done ? 1 : 0.7 }}
+                        style={{ opacity: passed ? 1 : 0.8 }}
                         onClick={() => lv && lv.unlocked && Taro.navigateTo({ url: `/pages/level-detail/index?levelId=${lid}` })}
                       >
-                        <Text style={{ color: done ? '#10B981' : lv?.unlocked ? '#1E40AF' : '#94A3B8', fontSize: '24rpx' }}>
-                          {done ? '✓ ' : lv?.unlocked ? '' : '🔒 '}{lv?.title || lid}
+                        <Text style={{ color: passed ? '#10B981' : lv?.unlocked ? '#1E40AF' : '#94A3B8', fontSize: '22rpx', display: 'block' }}>
+                          {passed ? '✓ ' : lv?.unlocked ? '' : '🔒 '}{lv?.title || lid}
                         </Text>
+                        {score > 0 && (
+                          <Text style={{ fontSize: '20rpx', color: passed ? '#10B981' : '#F59E0B', marginTop: '2rpx', display: 'block' }}>
+                            {score}分{passed ? ' 达标' : ''}
+                          </Text>
+                        )}
                       </View>
                     );
                   })}
