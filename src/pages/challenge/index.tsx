@@ -19,6 +19,11 @@ const ChallengePage: React.FC = () => {
   const { levels, currentVersion, setCurrentVersion, getFilteredQuestions } = useLearning();
 
   const handleLevelClick = (levelId: string) => {
+    const level = levels.find(l => l.id === levelId);
+    if (!level || !level.unlocked) {
+      Taro.showToast({ title: '请先完成上一关卡', icon: 'none' });
+      return;
+    }
     Taro.navigateTo({ url: `/pages/level-detail/index?levelId=${levelId}` });
   };
 
@@ -74,7 +79,7 @@ const ChallengePage: React.FC = () => {
           <Text>闯关进度</Text>
           <Text className={styles.progressCount}>{completedCount} / {levels.length} 关已通关</Text>
         </View>
-        <ProgressBar percent={progressPercent} variant="primary" />
+        <ProgressBar percent={progressPercent} variant="success" />
       </View>
 
       <View className={styles.levelsList}>

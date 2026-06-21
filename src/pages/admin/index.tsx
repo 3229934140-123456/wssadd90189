@@ -14,6 +14,7 @@ import {
   DEPARTMENT_NAMES
 } from '@/types';
 import { LEVELS } from '@/data/levels';
+import { CASE_LIBRARY, CaseItem } from '@/data/cases';
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 const riskLevels: { key: RiskLevel; label: string }[] = [
@@ -37,6 +38,7 @@ const AdminPage: React.FC = () => {
   const [filterLevel, setFilterLevel] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [showCasePicker, setShowCasePicker] = useState(false);
 
   const [formData, setFormData] = useState<{
     id: string;
@@ -93,7 +95,7 @@ const AdminPage: React.FC = () => {
   const handleDelete = (questionId: string) => {
     Taro.showModal({
       title: '确认删除',
-      content: '删除后该题目将从所有关卡中移除，错题本中的相关记录也会被清除，确定删除吗？',
+      content: '删除后该题目将从所有关卡中移除，确定删除吗？',
       confirmText: '删除',
       confirmColor: '#EF4444',
       success: (res) => {
@@ -103,6 +105,36 @@ const AdminPage: React.FC = () => {
         }
       }
     });
+  };
+
+  const handleSelectCase = (caseItem: CaseItem) => {
+    const baseOptions = caseItem.sampleOptions.slice(0, 4);
+    const paddedOptions: QuestionOption[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (baseOptions[i]) {
+        paddedOptions.push({
+          id: `${formData.id}-opt${i + 1}`,
+          text: baseOptions[i].text,
+          riskLevel: baseOptions[i].riskLevel,
+          isCorrect: baseOptions[i].riskLevel === 'low',
+          riskExplanation: baseOptions[i].riskExplanation,
+          caseReference: baseOptions[i].caseReference
+        });
+      } else {
+        paddedOptions.push(emptyOption(`${formData.id}-opt${i + 1}`));
+      }
+    }
+
+    setFormData({
+      ...formData,
+      title: caseItem.title,
+      scenario: caseItem.background + '\n\n风险后果：' + caseItem.riskConsequence,
+      department: caseItem.departments[0] || 'all',
+      knowledgeCategory: caseItem.knowledgeCategory,
+      options: paddedOptions
+    });
+    setShowCasePicker(false);
+    Taro.showToast({ title: '已填充案例，请补充选项', icon: 'none', duration: 2000 });
   };
 
   const handleSubmit = () => {
@@ -309,6 +341,23 @@ const AdminPage: React.FC = () => {
             </View>
 
             <ScrollView scrollY className={styles.modalBody}>
+              {!editingQuestion && (
+                <View className={styles.formGroup}>
+                  <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text className={styles.formLabel}>从案例库选取</Text>
+                    <View
+                      className={classnames(styles.pickerItem, styles.active)}
+                      onClick={() => setShowCasePicker(true)}
+                    >
+                      <Text>📋 选择案例</Text>
+                    </View>
+                  </View>
+                  <Text className={styles.helpText}>
+                    选择案例后自动填充情景描述、适用岗位、知识点和选项，也可手动填写
+                  </Text>
+                </View>
+              )}
+
               <View className={styles.formGroup}>
                 <Text className={styles.formLabel}>题目标题</Text>
                 <Input
@@ -444,7 +493,7 @@ const AdminPage: React.FC = () => {
                     </Text>
                     <Textarea
                       className={classnames(styles.formInput, styles.formTextarea)}
-                      placeholder="说明该选择存在的风险或为什么正确..."
+                      placeholder="说明该选择存在的风险..."
                       value={option.riskExplanation}
                       onInput={e => updateOption(idx, 'riskExplanation', e.detail.value)}
                       style={{ marginBottom: '16rpx', minHeight: '100rpx' }}
@@ -455,7 +504,7 @@ const AdminPage: React.FC = () => {
                     </Text>
                     <Textarea
                       className={classnames(styles.formInput, styles.formTextarea)}
-                      placeholder="引用公司过往真实案例，如：【案例·2023年华东某门店】..."
+                      placeholder="引用公司过往真实案例..."
                       value={option.caseReference}
                       onInput={e => updateOption(idx, 'caseReference', e.detail.value)}
                       style={{ minHeight: '100rpx' }}
@@ -473,6 +522,46 @@ const AdminPage: React.FC = () => {
                 {editingQuestion ? '保存修改' : '添加题目'}
               </Button>
             </View>
+          </View>
+        </View>
+      )}
+
+      {showCasePicker && (
+        <View className={styles.modalOverlay} onClick={() => setShowCasePicker(false)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>📋 选择案例</Text>
+              <Text className={styles.modalClose} onClick={() => setShowCasePicker(false)}>×</Text>
+            </View>
+            <ScrollView scrollY className={styles.modalBody}>
+              {CASE_LIBRARY.map(caseItem => (
+                <View
+                  key={caseItem.id}
+                  className={styles.caseCard}
+                  onClick={() => handleSelectCase(caseItem)}
+                >
+                  <View className={styles.caseCardHeader}>
+                    <Text className={styles.caseCardTitle}>{caseItem.title}</Text>
+                    <View className={styles.caseCardDepts}>
+                      {caseItem.departments.map(d => (
+                        <Text key={d} className={classnames(styles.metaTag, styles.dept)}>
+                          {DEPARTMENT_NAMES[d as DepartmentType]}
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+                  <Text className={styles.caseCardBg}>{caseItem.background}</Text>
+                  <View className={styles.caseCardMeta}>
+                    <Text className={classnames(styles.metaTag, styles.category)}>
+                      {CATEGORY_KNOWLEDGE.find(c => c.key === caseItem.knowledgeCategory)?.name}
+                    </Text>
+                    <Text className={styles.metaTag}>
+                      {caseItem.sampleOptions.length} 个参考选项
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           </View>
         </View>
       )}

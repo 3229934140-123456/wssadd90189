@@ -8,6 +8,7 @@ import { getLevelById, getNextLevel } from '@/data/levels';
 import { calculateGrade, getGradeColor } from '@/utils';
 import { CATEGORY_KNOWLEDGE, KnowledgeCategory } from '@/types';
 import KnowledgeTag from '@/components/KnowledgeTag';
+import { storage } from '@/utils/storage';
 
 const gradeDescriptions: Record<string, string> = {
   S: '表现卓越，应对能力非常出色',
@@ -24,7 +25,7 @@ const ResultPage: React.FC = () => {
   const correct = parseInt(router.params.correct as string) || 0;
   const total = parseInt(router.params.total as string) || 0;
 
-  const { getWeakKnowledge, currentLevelAnswers, levels } = useLearning();
+  const { getWeakKnowledgeFromSession, currentLevelAnswers, levels } = useLearning();
   const [level, setLevel] = useState(getLevelById(levelId));
   const [nextLevel, setNextLevel] = useState(getNextLevel(levelId));
 
@@ -34,8 +35,8 @@ const ResultPage: React.FC = () => {
   const scoreVariant = isPassed ? (score >= 90 ? 'success' : 'warning') : 'danger';
 
   const weakKnowledge = useMemo(() => {
-    return getWeakKnowledge();
-  }, [getWeakKnowledge, currentLevelAnswers]);
+    return getWeakKnowledgeFromSession();
+  }, [getWeakKnowledgeFromSession, currentLevelAnswers]);
 
   useEffect(() => {
     const lv = levels.find(l => l.id === levelId) || getLevelById(levelId);
@@ -67,8 +68,9 @@ const ResultPage: React.FC = () => {
   };
 
   const handleViewCategoryMistakes = (category: KnowledgeCategory) => {
+    storage.setMistakesFilter(category);
     Taro.switchTab({
-      url: `/pages/mistakes/index?category=${category}`
+      url: '/pages/mistakes/index'
     });
   };
 

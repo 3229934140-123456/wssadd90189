@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   LEVELS: 'compliance_levels',
   MISTAKES: 'compliance_mistakes',
   CURRENT_VERSION: 'compliance_current_version',
+  MISTAKES_FILTER: 'compliance_mistakes_filter',
   DEPARTMENT_STATS: 'compliance_department_stats',
   ANSWER_HISTORY: 'compliance_answer_history'
 };
@@ -226,7 +227,6 @@ export const storage = {
 
   calculateDepartmentStats: () => {
     const history = storage.getAnswerHistory();
-    const questions = storage.getQuestions();
 
     const deptMap: { [key: string]: {
       total: number;
@@ -278,6 +278,46 @@ export const storage = {
       };
     });
     return result;
+  },
+
+  getMistakesFilter: (): string => {
+    try {
+      return Taro.getStorageSync(STORAGE_KEYS.MISTAKES_FILTER) || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  },
+
+  setMistakesFilter: (filter: string): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.MISTAKES_FILTER, filter);
+    } catch (e) {
+      console.error('[Storage] setMistakesFilter error:', e);
+    }
+  },
+
+  recordLevelCompletion: (levelId: string, department: string, score: number): void => {
+    try {
+      const completionsKey = 'compliance_level_completions';
+      let completions: Array<{ levelId: string; department: string; score: number; timestamp: number }> = [];
+      try {
+        const data = Taro.getStorageSync(completionsKey);
+        completions = data ? JSON.parse(data) : [];
+      } catch (e) { /* empty */ }
+      completions.push({ levelId, department, score, timestamp: Date.now() });
+      Taro.setStorageSync(completionsKey, JSON.stringify(completions));
+    } catch (e) {
+      console.error('[Storage] recordLevelCompletion error:', e);
+    }
+  },
+
+  getLevelCompletions: (): Array<{ levelId: string; department: string; score: number; timestamp: number }> => {
+    try {
+      const data = Taro.getStorageSync('compliance_level_completions');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   clearAll: (): void => {

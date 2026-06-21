@@ -43,7 +43,8 @@ interface LearningContextType {
   deleteQuestion: (questionId: string) => void;
 
   getWeakKnowledge: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
-  getRealDepartmentStats: () => any[];
+  getWeakKnowledgeFromSession: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
+  getRealDepartmentStats: () => any;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -214,6 +215,7 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       });
     }
     console.log('[Learning] Level completed:', currentLevelId, 'score:', score);
+    storage.recordLevelCompletion(currentLevelId, currentVersion, score);
     Taro.showToast({ title: '进度已保存', icon: 'success' });
   }, [currentLevelId, levels]);
 
@@ -256,17 +258,6 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
   const getWeakKnowledge = useCallback(() => {
     const categoryStats: { [key in KnowledgeCategory]?: { correct: number; wrong: number } } = {};
 
-    currentLevelAnswers.forEach(ans => {
-      if (!categoryStats[ans.category]) {
-        categoryStats[ans.category] = { correct: 0, wrong: 0 };
-      }
-      if (ans.isCorrect) {
-        categoryStats[ans.category]!.correct += 1;
-      } else {
-        categoryStats[ans.category]!.wrong += 1;
-      }
-    });
-
     const allHistory = storage.getAnswerHistory();
     allHistory.forEach(h => {
       const cat = h.category as KnowledgeCategory;
@@ -277,6 +268,30 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
         categoryStats[cat]!.correct += 1;
       } else {
         categoryStats[cat]!.wrong += 1;
+      }
+    });
+
+    return Object.entries(categoryStats)
+      .filter(([_, stats]) => stats && stats.wrong > 0)
+      .map(([category, stats]) => ({
+        category: category as KnowledgeCategory,
+        errorCount: stats!.wrong,
+        errorRate: Math.round((stats!.wrong / (stats!.correct + stats!.wrong)) * 100)
+      }))
+      .sort((a, b) => b.errorCount - a.errorCount);
+  }, []);
+
+  const getWeakKnowledgeFromSession = useCallback(() => {
+    const categoryStats: { [key in KnowledgeCategory]?: { correct: number; wrong: number } } = {};
+
+    currentLevelAnswers.forEach(ans => {
+      if (!categoryStats[ans.category]) {
+        categoryStats[ans.category] = { correct: 0, wrong: 0 };
+      }
+      if (ans.isCorrect) {
+        categoryStats[ans.category]!.correct += 1;
+      } else {
+        categoryStats[ans.category]!.wrong += 1;
       }
     });
 
@@ -313,7 +328,34 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   const getRealDepartmentStats = useCallback(() => {
-    return storage.calculateDepartmentStats();
+    const baseStats = storage.calculateDepartmentStats();
+    const completions = storage.getLevelCompletions();
+
+    const completionByDept: { [key: string]: Set<string> } = {};
+    completions.forEach(c => {
+      const dept = c.department || 'all';
+      if (!completionByDept[dept]) {
+        completionByDept[dept] = new Set();
+      }
+      completionByDept[dept].add(c.levelId);
+    });
+
+    Object.keys(baseStats).forEach(dept => {
+      baseStats[dept].completedLevels = completionByDept[dept] ? completionByDept[dept].size : 0;
+    });
+
+    Object.entries(completionByDept).forEach(([dept, levelSet]) => {
+      if (!baseStats[dept]) {
+        baseStats[dept] = {
+          totalAnswered: 0,
+          totalCorrect: 0,
+          completedLevels: levelSet.size,
+          categoryErrors: {}
+        };
+      }
+    });
+
+    return baseStats;
   }, []);
 
   return (
@@ -341,6 +383,7 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       updateQuestion,
       deleteQuestion,
       getWeakKnowledge,
+      getWeakKnowledgeFromSession,
       getRealDepartmentStats
     }}>
       {children}

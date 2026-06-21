@@ -10,8 +10,7 @@ export const LEVELS: Level[] = [
     questionCount: 3,
     passingScore: 80,
     unlocked: true,
-    completed: true,
-    bestScore: 67
+    completed: false
   },
   {
     id: 'level2',

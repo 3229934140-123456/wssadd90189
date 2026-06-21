@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Button } from '@tarojs/components';
-import Taro, { useRouter, useDidShow } from '@tarojs/taro';
+import { useDidShow } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
 import { useLearning } from '@/store/LearningContext';
@@ -8,27 +8,24 @@ import KnowledgeTag from '@/components/KnowledgeTag';
 import StatCard from '@/components/StatCard';
 import { KnowledgeCategory, CATEGORY_KNOWLEDGE, MistakeRecord } from '@/types';
 import { formatTimestamp, getRiskLabel } from '@/utils';
+import { storage } from '@/utils/storage';
 
 const MistakesPage: React.FC = () => {
-  const router = useRouter();
-  const { mistakes, markMistakeReviewed, clearAllMistakes, getMistakeStats } = useLearning();
+  const { mistakes, markMistakeReviewed, getMistakeStats } = useLearning();
   const [activeFilter, setActiveFilter] = useState<KnowledgeCategory | 'all'>('all');
   const [selectedMistake, setSelectedMistake] = useState<MistakeRecord | null>(null);
 
-  useEffect(() => {
-    const categoryParam = router.params.category as string;
-    if (categoryParam && categoryParam !== 'all') {
-      setActiveFilter(categoryParam as KnowledgeCategory);
-      console.log('[Mistakes] Filter from URL:', categoryParam);
-    }
-  }, []);
-
   useDidShow(() => {
-    const categoryParam = router.params.category as string;
-    if (categoryParam && categoryParam !== 'all') {
-      setActiveFilter(categoryParam as KnowledgeCategory);
+    const savedFilter = storage.getMistakesFilter();
+    if (savedFilter && savedFilter !== 'all') {
+      setActiveFilter(savedFilter as KnowledgeCategory);
     }
   });
+
+  const handleFilterChange = (filter: KnowledgeCategory | 'all') => {
+    setActiveFilter(filter);
+    storage.setMistakesFilter(filter);
+  };
 
   const stats = useMemo(() => getMistakeStats(), [getMistakeStats]);
   const unreviewedCount = mistakes.filter(m => !m.reviewed).length;
@@ -72,7 +69,7 @@ const MistakesPage: React.FC = () => {
         <View className={styles.filterTags}>
           <View
             className={classnames(styles.filterTag, activeFilter === 'all' && styles.active)}
-            onClick={() => setActiveFilter('all')}
+            onClick={() => handleFilterChange('all')}
           >
             <Text>全部 ({mistakes.length})</Text>
           </View>
@@ -83,7 +80,7 @@ const MistakesPage: React.FC = () => {
               <View
                 key={cat.key}
                 className={classnames(styles.filterTag, activeFilter === cat.key && styles.active)}
-                onClick={() => setActiveFilter(cat.key)}
+                onClick={() => handleFilterChange(cat.key)}
               >
                 <Text>{cat.name} ({count})</Text>
               </View>
@@ -93,7 +90,7 @@ const MistakesPage: React.FC = () => {
         {activeFilter !== 'all' && (
           <View
             className={styles.clearFilter}
-            onClick={() => setActiveFilter('all')}
+            onClick={() => handleFilterChange('all')}
           >
             <Text className={styles.clearFilterText}>清除筛选</Text>
           </View>

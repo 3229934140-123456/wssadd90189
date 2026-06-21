@@ -26,16 +26,16 @@ const HomePage: React.FC = () => {
     : 0;
 
   const allAvgCompletion = useMemo(() => {
-    const realStats = getRealDepartmentStats();
-    const totalAnswered = Object.values(realStats).reduce((sum: number, dept: any) => sum + (dept.totalAnswered || 0), 0);
-    const totalCorrect = Object.values(realStats).reduce((sum: number, dept: any) => sum + (dept.totalCorrect || 0), 0);
+    const realStats = getRealDepartmentStats() as { [key: string]: { totalAnswered: number; totalCorrect: number } };
+    const totalAnswered = Object.values(realStats).reduce((sum, dept) => sum + (dept.totalAnswered || 0), 0);
+    const totalCorrect = Object.values(realStats).reduce((sum, dept) => sum + (dept.totalCorrect || 0), 0);
     if (totalAnswered === 0) return 65;
     return Math.round((totalCorrect / totalAnswered) * 100);
   }, [getRealDepartmentStats]);
 
   const handleLevelClick = (levelId: string) => {
     const level = levels.find(l => l.id === levelId);
-    if (!level || level.locked) {
+    if (!level || !level.unlocked) {
       Taro.showToast({ title: '请先完成上一关卡', icon: 'none' });
       return;
     }
@@ -60,7 +60,7 @@ const HomePage: React.FC = () => {
   };
 
   const nextUnlockedLevel = useMemo(() => {
-    return levels.find(l => !l.completed && !l.locked);
+    return levels.find(l => !l.completed && l.unlocked);
   }, [levels]);
 
   return (
@@ -107,7 +107,7 @@ const HomePage: React.FC = () => {
               {userProgress.completedLevels.length}/{levels.length} 关
             </Text>
           </View>
-          <ProgressBar percent={progressPercent} variant="primary" />
+          <ProgressBar percent={progressPercent} variant="success" />
         </View>
         <View style={{ height: '24rpx' }} />
         <View className={styles.progressItem}>
@@ -115,7 +115,7 @@ const HomePage: React.FC = () => {
             <Text className={styles.progressItemText}>全员平均进度</Text>
             <Text className={styles.progressItemPercent}>{allAvgCompletion}%</Text>
           </View>
-          <ProgressBar percent={allAvgCompletion} variant="info" />
+          <ProgressBar percent={allAvgCompletion} variant="default" />
         </View>
       </View>
 

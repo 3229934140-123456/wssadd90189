@@ -35,6 +35,15 @@ const LevelDetailPage: React.FC = () => {
     const lv = levels.find(l => l.id === levelId) || getLevelById(levelId);
     setQuestions(qs);
     setLevel(lv);
+
+    if (lv && !lv.unlocked) {
+      Taro.showToast({ title: '请先完成前置关卡', icon: 'none', duration: 2000 });
+      setTimeout(() => {
+        Taro.navigateBack();
+      }, 1500);
+      return;
+    }
+
     setCurrentLevel(levelId);
     resetCurrentLevel();
     currentCorrectRef.current = 0;

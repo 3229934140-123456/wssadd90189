@@ -9,6 +9,13 @@ import KnowledgeTag from '@/components/KnowledgeTag';
 import { CATEGORY_KNOWLEDGE, KnowledgeCategory, DepartmentType, DEPARTMENT_NAMES } from '@/types';
 import { calculateGrade, getGradeColor } from '@/utils';
 
+interface DeptStats {
+  totalAnswered: number;
+  totalCorrect: number;
+  completedLevels: number;
+  categoryErrors: Record<string, number>;
+}
+
 const gradeDescriptions: Record<string, string> = {
   S: '卓越级：应对能力出色，可作为部门合规标杆',
   A: '优秀级：具备良好的风险识别和应对能力',
@@ -44,18 +51,20 @@ const StatsPage: React.FC = () => {
     }).sort((a, b) => a.mastery - b.mastery);
   }, [getMistakeStats]);
 
-  const realStats = useMemo(() => getRealDepartmentStats(), [getRealDepartmentStats]);
+  const realStats = useMemo(() => getRealDepartmentStats() as Record<string, DeptStats>, [getRealDepartmentStats]);
 
   const companyOverall = useMemo(() => {
-    const totalAnswered = Object.values(realStats).reduce((sum, dept: any) => sum + dept.totalAnswered, 0);
-    const totalCorrect = Object.values(realStats).reduce((sum, dept: any) => sum + dept.totalCorrect, 0);
+    const deptValues = Object.values(realStats);
+    const totalAnswered = deptValues.reduce((sum, d) => sum + (d.totalAnswered || 0), 0);
+    const totalCorrect = deptValues.reduce((sum, d) => sum + (d.totalCorrect || 0), 0);
     const avgScore = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
-    const completedLevels = Object.values(realStats).reduce((sum, dept: any) => sum + dept.completedLevels, 0);
-    
+    const completedLevels = deptValues.reduce((sum, d) => sum + (d.completedLevels || 0), 0);
+
     const categoryErrors: Record<string, number> = {};
-    Object.values(realStats).forEach((dept: any) => {
-      Object.entries(dept.categoryErrors || {}).forEach(([cat, count]) => {
-        categoryErrors[cat] = (categoryErrors[cat] || 0) + (count as number);
+    deptValues.forEach(d => {
+      const errs = d.categoryErrors || {};
+      Object.entries(errs).forEach(([cat, count]) => {
+        categoryErrors[cat] = (categoryErrors[cat] || 0) + count;
       });
     });
 
@@ -135,7 +144,7 @@ const StatsPage: React.FC = () => {
                 <Text style={{ fontSize: '28rpx', color: '#475569' }}>综合得分</Text>
                 <Text style={{ fontSize: '28rpx', fontWeight: '600', color: '#1E40AF' }}>{overallPercent}分</Text>
               </View>
-              <ProgressBar percent={overallPercent} variant="primary" />
+              <ProgressBar percent={overallPercent} variant="success" />
             </View>
           </View>
 
@@ -235,20 +244,20 @@ const StatsPage: React.FC = () => {
                 暂无部门数据，各岗位版本答题后自动统计
               </Text>
             ) : (
-              Object.entries(realStats).map(([deptKey, deptStats]: [string, any]) => {
+              Object.entries(realStats).map(([deptKey, deptStats]) => {
                 const deptName = DEPARTMENT_NAMES[deptKey as DepartmentType] || deptKey;
-                const accuracy = deptStats.totalAnswered > 0
+                const deptAccuracy = deptStats.totalAnswered > 0
                   ? Math.round((deptStats.totalCorrect / deptStats.totalAnswered) * 100)
                   : 0;
-                
+
                 const weakCategories = Object.entries(deptStats.categoryErrors || {})
                   .map(([category, count]) => {
                     const info = CATEGORY_KNOWLEDGE.find(c => c.key === category);
                     return {
                       category,
                       name: info?.name || category,
-                      errorCount: count as number,
-                      errorRate: deptStats.totalAnswered > 0 ? Math.round(((count as number) / deptStats.totalAnswered) * 100) : 0
+                      errorCount: count,
+                      errorRate: deptStats.totalAnswered > 0 ? Math.round((count / deptStats.totalAnswered) * 100) : 0
                     };
                   })
                   .sort((a, b) => b.errorCount - a.errorCount)
@@ -259,15 +268,15 @@ const StatsPage: React.FC = () => {
                     <View className={styles.departmentHeader}>
                       <Text className={styles.departmentName}>{deptName}</Text>
                       <Text className={styles.departmentMeta}>
-                        正确率 {accuracy}% · 通关 {deptStats.completedLevels || 0}次
+                        正确率 {deptAccuracy}% · 通关 {deptStats.completedLevels || 0}次
                       </Text>
                     </View>
                     <View className={styles.departmentProgress}>
                       <Text className={styles.departmentProgressText}>正确率</Text>
                       <View style={{ flex: 1 }}>
                         <ProgressBar
-                          percent={accuracy}
-                          variant={accuracy >= 80 ? 'success' : accuracy >= 60 ? 'warning' : 'danger'}
+                          percent={deptAccuracy}
+                          variant={deptAccuracy >= 80 ? 'success' : deptAccuracy >= 60 ? 'warning' : 'danger'}
                         />
                       </View>
                     </View>
