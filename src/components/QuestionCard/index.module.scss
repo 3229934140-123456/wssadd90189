@@ -1,0 +1,216 @@
+@use '@/styles/variables.scss' as *;
+
+.questionCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.questionHeader {
+  padding: $spacing-lg $spacing-lg $spacing-md;
+  background: linear-gradient(135deg, $color-primary-bg 0%, $color-bg-card 100%);
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.questionMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.questionNumber {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  background: rgba($color-primary, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: $radius-sm;
+}
+
+.questionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: $line-height-tight;
+  margin-bottom: $spacing-sm;
+}
+
+.questionScenario {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.optionsList {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.optionItem {
+  background: $color-bg-card;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-md;
+  transition: all $transition-base;
+  position: relative;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.selected {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+  }
+
+  &.correct {
+    border-color: $color-success;
+    background: $color-success-bg;
+  }
+
+  &.wrong {
+    border-color: $color-error;
+    background: $color-error-bg;
+  }
+
+  &.disabled {
+    opacity: 0.7;
+  }
+}
+
+.optionHeader {
+  display: flex;
+  align-items: flex-start;
+}
+
+.optionLabel {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+
+  .selected & {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+
+  .correct & {
+    background: $color-success;
+    color: $color-text-white;
+  }
+
+  .wrong & {
+    background: $color-error;
+    color: $color-text-white;
+  }
+}
+
+.optionText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+  flex: 1;
+  padding-top: 6rpx;
+}
+
+.optionRisk {
+  margin-left: $spacing-md;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+
+  &.high {
+    background: $color-error-bg;
+    color: $color-error;
+  }
+
+  &.medium {
+    background: $color-warning-bg;
+    color: $color-warning;
+  }
+
+  &.low {
+    background: $color-success-bg;
+    color: $color-success;
+  }
+}
+
+.feedbackSection {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.feedbackCard {
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-top: $spacing-sm;
+
+  &.correct {
+    background: $color-success-bg;
+    border-left: 4rpx solid $color-success;
+  }
+
+  &.wrong {
+    background: $color-error-bg;
+    border-left: 4rpx solid $color-error;
+  }
+}
+
+.feedbackTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+
+  &.correct { color: $color-success; }
+  &.wrong { color: $color-error; }
+}
+
+.feedbackTitleIcon {
+  margin-right: $spacing-xs;
+  font-size: $font-size-lg;
+}
+
+.feedbackContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  margin-bottom: $spacing-md;
+}
+
+.caseReference {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+}
+
+.caseLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.caseContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+.nextButton {
+  margin-top: $spacing-lg;
+}

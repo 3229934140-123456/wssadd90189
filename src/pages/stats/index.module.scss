@@ -1,0 +1,274 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 48rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  padding: $spacing-xl $page-padding;
+  color: $color-text-white;
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.headerDesc {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+}
+
+.viewTabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: $radius-button;
+  padding: 6rpx;
+  margin-top: $spacing-lg;
+}
+
+.viewTab {
+  flex: 1;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: $font-size-sm;
+  border-radius: $radius-button;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-text-white;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.personalSection {
+  margin-top: $spacing-lg;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
+  padding: 0 $page-padding;
+  margin-bottom: $spacing-lg;
+}
+
+.sectionCard {
+  margin: 0 $page-padding $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+  display: flex;
+  align-items: center;
+}
+
+.sectionIcon {
+  font-size: 32rpx;
+  margin-right: $spacing-sm;
+}
+
+.gradeDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg 0;
+  margin-bottom: $spacing-lg;
+  background: linear-gradient(135deg, $color-primary-bg 0%, #EFF6FF 100%);
+  border-radius: $radius-md;
+}
+
+.gradeCircle {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-right: $spacing-lg;
+}
+
+.gradeInfo {
+  flex: 1;
+}
+
+.gradeLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: 4rpx;
+}
+
+.gradeName {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.gradeDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-tight;
+}
+
+.knowledgeBar {
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.knowledgeBarHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+}
+
+.knowledgeBarName {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.knowledgeBarPercent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.departmentCard {
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.departmentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.departmentName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.departmentMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.departmentProgress {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.departmentProgressText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  min-width: 120rpx;
+}
+
+.departmentWeakTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.weakTag {
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-sm;
+  background: $color-error-bg;
+  color: $color-error;
+}
+
+.weakTagRate {
+  font-weight: $font-weight-semibold;
+}
+
+.companyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.companyTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.companySubtitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.weakCategoryItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.weakCategoryRank {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-right: $spacing-md;
+  background: $color-text-tertiary;
+
+  &.rank1 { background: $color-error; }
+  &.rank2 { background: $color-warning; }
+  &.rank3 { background: $color-primary; }
+}
+
+.weakCategoryName {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.weakCategoryRate {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-error;
+}

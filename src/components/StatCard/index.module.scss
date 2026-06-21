@@ -1,0 +1,43 @@
+@use '@/styles/variables.scss' as *;
+
+.statCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  flex: 1;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.2;
+  margin-bottom: $spacing-xs;
+
+  &.primary { color: $color-primary; }
+  &.success { color: $color-success; }
+  &.warning { color: $color-warning; }
+  &.danger { color: $color-error; }
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.statUnit {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-left: 4rpx;
+  font-weight: $font-weight-normal;
+}
+
+.statTrend {
+  font-size: $font-size-xs;
+  margin-top: 4rpx;
+
+  &.up { color: $color-success; }
+  &.down { color: $color-error; }
+}

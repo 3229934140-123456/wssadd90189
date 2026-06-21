@@ -1,0 +1,78 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 48rpx;
+}
+
+.levelHeader {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $spacing-xl $page-padding $spacing-lg;
+  color: $color-text-white;
+}
+
+.levelOrder {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+  margin-bottom: $spacing-xs;
+}
+
+.levelTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.levelDesc {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+  line-height: $line-height-loose;
+}
+
+.progressTracker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $page-padding;
+  background: $color-bg-card;
+  margin: -20rpx $page-padding $spacing-lg;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+}
+
+.progressDots {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.progressDot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-round;
+  background: $color-border;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary;
+    transform: scale(1.3);
+  }
+
+  &.correct {
+    background: $color-success;
+  }
+
+  &.wrong {
+    background: $color-error;
+  }
+}
+
+.progressText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.questionContainer {
+  padding: 0 $page-padding;
+}

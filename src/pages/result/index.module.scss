@@ -1,0 +1,221 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, $color-primary 0%, $color-bg-page 40%);
+  padding-bottom: 48rpx;
+}
+
+.resultHeader {
+  padding: $spacing-xl * 2 $page-padding $spacing-lg;
+  text-align: center;
+  color: $color-text-white;
+}
+
+.resultIcon {
+  font-size: 120rpx;
+  margin-bottom: $spacing-md;
+}
+
+.resultTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.resultSubtitle {
+  font-size: $font-size-md;
+  opacity: 0.9;
+}
+
+.scoreCard {
+  margin: 0 $page-padding $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  box-shadow: $shadow-card;
+  text-align: center;
+  margin-top: -20rpx;
+}
+
+.scoreValue {
+  font-size: 100rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  line-height: 1;
+  margin-bottom: $spacing-xs;
+
+  &.success { color: $color-success; }
+  &.warning { color: $color-warning; }
+  &.danger { color: $color-error; }
+}
+
+.scoreLabel {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-lg;
+}
+
+.scoreBreakdown {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-lg * 2;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid $color-divider;
+}
+
+.breakdownItem {
+  text-align: center;
+}
+
+.breakdownValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+
+  &.correct { color: $color-success; }
+  &.wrong { color: $color-error; }
+}
+
+.breakdownLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.resultDetail {
+  margin: 0 $page-padding $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.detailTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.passCondition {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+
+  &.pass {
+    background: $color-success-bg;
+  }
+
+  &.fail {
+    background: $color-error-bg;
+  }
+}
+
+.passIcon {
+  font-size: 40rpx;
+  margin-right: $spacing-sm;
+}
+
+.passText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.gradeSection {
+  margin-bottom: $spacing-md;
+}
+
+.gradeLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.gradeDisplay {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.gradeBadge {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.gradeInfo {
+  flex: 1;
+}
+
+.gradeName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.gradeDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-tight;
+}
+
+.unlockHint {
+  padding: $spacing-md;
+  background: $color-primary-bg;
+  border-radius: $radius-md;
+  border-left: 4rpx solid $color-primary;
+}
+
+.unlockText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  line-height: $line-height-loose;
+}
+
+.actionButtons {
+  padding: 0 $page-padding;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.actionBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &.primary {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+  }
+
+  &.secondary {
+    background: $color-bg-card;
+    color: $color-primary;
+    border: 2rpx solid $color-primary;
+  }
+
+  &.ghost {
+    background: transparent;
+    color: $color-text-secondary;
+  }
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
