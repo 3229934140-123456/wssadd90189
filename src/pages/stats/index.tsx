@@ -6,9 +6,7 @@ import { useLearning } from '@/store/LearningContext';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
 import KnowledgeTag from '@/components/KnowledgeTag';
-import { CATEGORY_KNOWLEDGE, KnowledgeCategory } from '@/types';
-import { DEPARTMENT_STATS, COMPANY_OVERALL_STATS } from '@/data/userStats';
-import { LEVELS } from '@/data/levels';
+import { CATEGORY_KNOWLEDGE, KnowledgeCategory, DepartmentType, DEPARTMENT_NAMES } from '@/types';
 import { calculateGrade, getGradeColor } from '@/utils';
 
 const gradeDescriptions: Record<string, string> = {
@@ -20,7 +18,7 @@ const gradeDescriptions: Record<string, string> = {
 };
 
 const StatsPage: React.FC = () => {
-  const { userProgress, getMistakeStats } = useLearning();
+  const { userProgress, getMistakeStats, getRealDepartmentStats } = useLearning();
   const [viewMode, setViewMode] = useState<'personal' | 'department'>('personal');
 
   const accuracy = userProgress.totalAnswered > 0
@@ -45,6 +43,44 @@ const StatsPage: React.FC = () => {
       };
     }).sort((a, b) => a.mastery - b.mastery);
   }, [getMistakeStats]);
+
+  const realStats = useMemo(() => getRealDepartmentStats(), [getRealDepartmentStats]);
+
+  const companyOverall = useMemo(() => {
+    const totalAnswered = Object.values(realStats).reduce((sum, dept: any) => sum + dept.totalAnswered, 0);
+    const totalCorrect = Object.values(realStats).reduce((sum, dept: any) => sum + dept.totalCorrect, 0);
+    const avgScore = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+    const completedLevels = Object.values(realStats).reduce((sum, dept: any) => sum + dept.completedLevels, 0);
+    
+    const categoryErrors: Record<string, number> = {};
+    Object.values(realStats).forEach((dept: any) => {
+      Object.entries(dept.categoryErrors || {}).forEach(([cat, count]) => {
+        categoryErrors[cat] = (categoryErrors[cat] || 0) + (count as number);
+      });
+    });
+
+    const topWeakCategories = Object.entries(categoryErrors)
+      .map(([category, errorCount]) => {
+        const info = CATEGORY_KNOWLEDGE.find(c => c.key === category);
+        return {
+          category,
+          name: info?.name || category,
+          errorCount,
+          errorRate: totalAnswered > 0 ? Math.round((errorCount / totalAnswered) * 100) : 0
+        };
+      })
+      .sort((a, b) => b.errorCount - a.errorCount)
+      .slice(0, 3);
+
+    return {
+      totalAnswered,
+      totalCorrect,
+      avgScore,
+      completedLevels,
+      departmentCount: Object.keys(realStats).length,
+      topWeakCategories
+    };
+  }, [realStats]);
 
   return (
     <ScrollView scrollY className={styles.container}>
@@ -160,27 +196,33 @@ const StatsPage: React.FC = () => {
             <View className={styles.companyHeader}>
               <View>
                 <Text className={styles.companyTitle}>全公司总览</Text>
-                <Text className={styles.companySubtitle}>数据更新于今日</Text>
+                <Text className={styles.companySubtitle}>基于真实答题记录</Text>
               </View>
             </View>
             <View className={styles.statsGrid} style={{ padding: 0, marginBottom: '24rpx' }}>
-              <StatCard value={COMPANY_OVERALL_STATS.totalEmployees} label="参训人数" unit="人" />
-              <StatCard value={COMPANY_OVERALL_STATS.overallCompletionRate} label="整体完成率" unit="%" color="success" />
-              <StatCard value={COMPANY_OVERALL_STATS.completedCount} label="已完成" unit="人" color="primary" />
-              <StatCard value={COMPANY_OVERALL_STATS.overallAverageScore} label="平均分" unit="分" color="warning" />
+              <StatCard value={companyOverall.departmentCount + 3} label="参训部门" unit="个" />
+              <StatCard value={companyOverall.avgScore} label="整体正确率" unit="%" color="success" />
+              <StatCard value={companyOverall.completedLevels} label="累计通关" unit="次" color="primary" />
+              <StatCard value={companyOverall.totalAnswered} label="累计答题" unit="道" color="warning" />
             </View>
             <Text style={{ fontSize: '28rpx', fontWeight: '600', color: '#0F172A', marginBottom: '16rpx' }}>
               公司级易错点TOP3
             </Text>
-            {COMPANY_OVERALL_STATS.topWeakCategories.map((cat, idx) => (
-              <View key={cat.category} className={styles.weakCategoryItem}>
-                <View className={classnames(styles.weakCategoryRank, styles[`rank${idx + 1}`])}>
-                  <Text>{idx + 1}</Text>
+            {companyOverall.topWeakCategories.length === 0 ? (
+              <Text style={{ fontSize: '26rpx', color: '#94A3B8', textAlign: 'center', padding: '24rpx 0' }}>
+                暂无数据，开始答题后自动统计
+              </Text>
+            ) : (
+              companyOverall.topWeakCategories.map((cat, idx) => (
+                <View key={cat.category} className={styles.weakCategoryItem}>
+                  <View className={classnames(styles.weakCategoryRank, styles[`rank${idx + 1}`])}>
+                    <Text>{idx + 1}</Text>
+                  </View>
+                  <Text className={styles.weakCategoryName}>{cat.name}</Text>
+                  <Text className={styles.weakCategoryRate}>错误率 {cat.errorRate}%</Text>
                 </View>
-                <Text className={styles.weakCategoryName}>{cat.name}</Text>
-                <Text className={styles.weakCategoryRate}>错误率 {cat.errorRate}%</Text>
-              </View>
-            ))}
+              ))
+            )}
           </View>
 
           <View className={styles.sectionCard}>
@@ -188,41 +230,69 @@ const StatsPage: React.FC = () => {
               <Text className={styles.sectionIcon}>👥</Text>
               各部门详情
             </Text>
-            {DEPARTMENT_STATS.map(dept => (
-              <View key={dept.name} className={styles.departmentCard}>
-                <View className={styles.departmentHeader}>
-                  <Text className={styles.departmentName}>{dept.name}</Text>
-                  <Text className={styles.departmentMeta}>
-                    {Math.round(dept.completionRate)}% 完成 · 均分 {dept.averageScore}
-                  </Text>
-                </View>
-                <View className={styles.departmentProgress}>
-                  <Text className={styles.departmentProgressText}>完成率</Text>
-                  <View style={{ flex: 1 }}>
-                    <ProgressBar
-                      percent={dept.completionRate}
-                      variant={dept.completionRate >= 80 ? 'success' : dept.completionRate >= 60 ? 'warning' : 'danger'}
-                    />
-                  </View>
-                </View>
-                {dept.weakCategories.length > 0 && (
-                  <View style={{ marginTop: '16rpx' }}>
-                    <Text style={{ fontSize: '24rpx', color: '#94A3B8', marginBottom: '8rpx' }}>薄弱环节：</Text>
-                    <View className={styles.departmentWeakTags}>
-                      {dept.weakCategories.map(wc => {
-                        const catInfo = CATEGORY_KNOWLEDGE.find(c => c.key === wc.category);
-                        return (
-                          <View key={wc.category} className={styles.weakTag}>
-                            <Text>{catInfo?.name || wc.category} </Text>
-                            <Text className={styles.weakTagRate}>{wc.errorRate}%</Text>
-                          </View>
-                        );
-                      })}
+            {Object.keys(realStats).length === 0 ? (
+              <Text style={{ fontSize: '26rpx', color: '#94A3B8', textAlign: 'center', padding: '48rpx 0' }}>
+                暂无部门数据，各岗位版本答题后自动统计
+              </Text>
+            ) : (
+              Object.entries(realStats).map(([deptKey, deptStats]: [string, any]) => {
+                const deptName = DEPARTMENT_NAMES[deptKey as DepartmentType] || deptKey;
+                const accuracy = deptStats.totalAnswered > 0
+                  ? Math.round((deptStats.totalCorrect / deptStats.totalAnswered) * 100)
+                  : 0;
+                
+                const weakCategories = Object.entries(deptStats.categoryErrors || {})
+                  .map(([category, count]) => {
+                    const info = CATEGORY_KNOWLEDGE.find(c => c.key === category);
+                    return {
+                      category,
+                      name: info?.name || category,
+                      errorCount: count as number,
+                      errorRate: deptStats.totalAnswered > 0 ? Math.round(((count as number) / deptStats.totalAnswered) * 100) : 0
+                    };
+                  })
+                  .sort((a, b) => b.errorCount - a.errorCount)
+                  .slice(0, 3);
+
+                return (
+                  <View key={deptKey} className={styles.departmentCard}>
+                    <View className={styles.departmentHeader}>
+                      <Text className={styles.departmentName}>{deptName}</Text>
+                      <Text className={styles.departmentMeta}>
+                        正确率 {accuracy}% · 通关 {deptStats.completedLevels || 0}次
+                      </Text>
+                    </View>
+                    <View className={styles.departmentProgress}>
+                      <Text className={styles.departmentProgressText}>正确率</Text>
+                      <View style={{ flex: 1 }}>
+                        <ProgressBar
+                          percent={accuracy}
+                          variant={accuracy >= 80 ? 'success' : accuracy >= 60 ? 'warning' : 'danger'}
+                        />
+                      </View>
+                    </View>
+                    {weakCategories.length > 0 && (
+                      <View style={{ marginTop: '16rpx' }}>
+                        <Text style={{ fontSize: '24rpx', color: '#94A3B8', marginBottom: '8rpx' }}>薄弱环节：</Text>
+                        <View className={styles.departmentWeakTags}>
+                          {weakCategories.map(wc => (
+                            <View key={wc.category} className={styles.weakTag}>
+                              <Text>{wc.name} </Text>
+                              <Text className={styles.weakTagRate}>{wc.errorRate}%</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                    <View style={{ marginTop: '16rpx', paddingTop: '16rpx', borderTop: '1rpx solid #E2E8F0' }}>
+                      <Text style={{ fontSize: '22rpx', color: '#94A3B8' }}>
+                        累计答题 {deptStats.totalAnswered || 0} 道，正确 {deptStats.totalCorrect || 0} 道
+                      </Text>
                     </View>
                   </View>
-                )}
-              </View>
-            ))}
+                );
+              })
+            )}
           </View>
         </View>
       )}

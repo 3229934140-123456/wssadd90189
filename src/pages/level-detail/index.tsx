@@ -5,7 +5,6 @@ import styles from './index.module.scss';
 import classnames from 'classnames';
 import { useLearning } from '@/store/LearningContext';
 import QuestionCard from '@/components/QuestionCard';
-import { getQuestionsByLevel } from '@/data/questions';
 import { getLevelById } from '@/data/levels';
 import { QuestionOption, Level } from '@/types';
 
@@ -15,28 +14,32 @@ const LevelDetailPage: React.FC = () => {
   const {
     currentQuestionIndex,
     answers,
+    currentVersion,
     setCurrentLevel,
     submitAnswer,
     nextQuestion,
-    resetCurrentLevel
+    resetCurrentLevel,
+    getFilteredQuestions,
+    completeCurrentLevel,
+    levels
   } = useLearning();
 
-  const [questions, setQuestions] = useState(() => getQuestionsByLevel(levelId));
-  const [level, setLevel] = useState<Level | undefined>(getLevelById(levelId));
+  const [questions, setQuestions] = useState<ReturnType<typeof getFilteredQuestions>>([]);
+  const [level, setLevel] = useState<Level | undefined>();
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const currentCorrectRef = useRef(0);
 
   useEffect(() => {
-    const qs = getQuestionsByLevel(levelId);
-    const lv = getLevelById(levelId);
+    const qs = getFilteredQuestions(levelId);
+    const lv = levels.find(l => l.id === levelId) || getLevelById(levelId);
     setQuestions(qs);
     setLevel(lv);
     setCurrentLevel(levelId);
     resetCurrentLevel();
     currentCorrectRef.current = 0;
-    console.log('[LevelDetail] Loaded level:', levelId, 'questions:', qs.length);
-  }, [levelId, setCurrentLevel, resetCurrentLevel]);
+    console.log('[LevelDetail] Loaded level:', levelId, 'version:', currentVersion, 'questions:', qs.length);
+  }, [levelId, currentVersion, getFilteredQuestions, levels, setCurrentLevel, resetCurrentLevel]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
@@ -53,7 +56,12 @@ const LevelDetailPage: React.FC = () => {
   const handleNext = () => {
     if (isLastQuestion) {
       const correctCount = currentCorrectRef.current;
-      const score = Math.round((correctCount / questions.length) * 100);
+      const score = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+
+      if (level && score >= level.passingScore) {
+        completeCurrentLevel(score);
+      }
+
       Taro.redirectTo({
         url: `/pages/result/index?levelId=${levelId}&score=${score}&correct=${correctCount}&total=${questions.length}`
       });
@@ -75,7 +83,7 @@ const LevelDetailPage: React.FC = () => {
   return (
     <ScrollView scrollY className={styles.container}>
       <View className={styles.levelHeader}>
-        <Text className={styles.levelOrder}>第 {level.order} 关</Text>
+        <Text className={styles.levelOrder}>第 {level.order} 关 · {currentVersion !== 'all' ? `岗位版` : '通用版'}</Text>
         <Text className={styles.levelTitle}>{level.title}</Text>
         <Text className={styles.levelDesc}>{level.description}</Text>
       </View>

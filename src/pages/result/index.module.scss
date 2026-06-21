@@ -183,6 +183,68 @@
   line-height: $line-height-loose;
 }
 
+.weakSection {
+  margin-top: $spacing-md;
+}
+
+.weakDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+}
+
+.weakList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.weakItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: $color-warning-bg;
+  border-radius: $radius-md;
+  border-left: 4rpx solid $color-warning;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+.weakItemLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+}
+
+.weakItemName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.weakItemRight {
+  text-align: right;
+}
+
+.weakErrorRate {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-warning;
+  display: block;
+  margin-bottom: 2rpx;
+}
+
+.weakGoReview {
+  font-size: $font-size-xs;
+  color: $color-primary;
+}
+
 .actionButtons {
   padding: 0 $page-padding;
   display: flex;

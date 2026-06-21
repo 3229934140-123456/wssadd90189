@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Button } from '@tarojs/components';
+import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
 import { useLearning } from '@/store/LearningContext';
@@ -9,9 +10,25 @@ import { KnowledgeCategory, CATEGORY_KNOWLEDGE, MistakeRecord } from '@/types';
 import { formatTimestamp, getRiskLabel } from '@/utils';
 
 const MistakesPage: React.FC = () => {
+  const router = useRouter();
   const { mistakes, markMistakeReviewed, clearAllMistakes, getMistakeStats } = useLearning();
   const [activeFilter, setActiveFilter] = useState<KnowledgeCategory | 'all'>('all');
   const [selectedMistake, setSelectedMistake] = useState<MistakeRecord | null>(null);
+
+  useEffect(() => {
+    const categoryParam = router.params.category as string;
+    if (categoryParam && categoryParam !== 'all') {
+      setActiveFilter(categoryParam as KnowledgeCategory);
+      console.log('[Mistakes] Filter from URL:', categoryParam);
+    }
+  }, []);
+
+  useDidShow(() => {
+    const categoryParam = router.params.category as string;
+    if (categoryParam && categoryParam !== 'all') {
+      setActiveFilter(categoryParam as KnowledgeCategory);
+    }
+  });
 
   const stats = useMemo(() => getMistakeStats(), [getMistakeStats]);
   const unreviewedCount = mistakes.filter(m => !m.reviewed).length;
@@ -37,6 +54,11 @@ const MistakesPage: React.FC = () => {
       <View className={styles.header}>
         <Text className={styles.headerTitle}>错题本</Text>
         <Text className={styles.headerDesc}>温故知新，避免在真实场景中犯同样的错误</Text>
+        {activeFilter !== 'all' && (
+          <Text className={styles.filterActiveHint}>
+            当前筛选：{CATEGORY_KNOWLEDGE.find(c => c.key === activeFilter)?.name}
+          </Text>
+        )}
       </View>
 
       <View className={styles.statsBar}>
@@ -68,16 +90,28 @@ const MistakesPage: React.FC = () => {
             );
           })}
         </View>
+        {activeFilter !== 'all' && (
+          <View
+            className={styles.clearFilter}
+            onClick={() => setActiveFilter('all')}
+          >
+            <Text className={styles.clearFilterText}>清除筛选</Text>
+          </View>
+        )}
       </View>
 
       <View className={styles.mistakesList}>
         {filteredMistakes.length === 0 ? (
           <View className={styles.emptyState}>
-            <Text className={styles.emptyIcon}>🎉</Text>
-            <Text className={styles.emptyTitle}>暂无错题</Text>
-            <Text className={styles.emptyDesc}>继续闯关，错题会自动记录在这里供你复习</Text>
-          </View>
-        ) : (
+          <Text className={styles.emptyIcon}>🎉</Text>
+          <Text className={styles.emptyTitle}>
+            {activeFilter !== 'all' ? '该知识点暂无错题' : '暂无错题'}
+          </Text>
+          <Text className={styles.emptyDesc}>
+            {activeFilter !== 'all' ? '切换其他知识点查看，或继续闯关积累错题' : '继续闯关，错题会自动记录在这里供你复习'}
+          </Text>
+        </View>
+      ) : (
           filteredMistakes.map(mistake => (
             <View key={mistake.question.id} className={styles.mistakeCard}>
               <View className={styles.mistakeHeader}>
@@ -119,7 +153,7 @@ const MistakesPage: React.FC = () => {
           <View className={styles.detailContent} onClick={e => e.stopPropagation()}>
             <View className={styles.detailHeader}>
               <Text className={styles.detailTitle}>错题解析</Text>
-              <Text className={styles.closeBtn} onClick={handleCloseDetail}>×</Text>
+              <Text className={styles.modalClose} onClick={handleCloseDetail}>×</Text>
             </View>
             <ScrollView scrollY className={styles.detailBody}>
               <View className={styles.detailSection}>

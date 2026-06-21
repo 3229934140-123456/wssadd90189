@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, Button, ScrollView } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
+import { useLearning } from '@/store/LearningContext';
 import { getLevelById, getNextLevel } from '@/data/levels';
 import { calculateGrade, getGradeColor } from '@/utils';
+import { CATEGORY_KNOWLEDGE, KnowledgeCategory } from '@/types';
+import KnowledgeTag from '@/components/KnowledgeTag';
 
 const gradeDescriptions: Record<string, string> = {
   S: '表现卓越，应对能力非常出色',
@@ -21,20 +24,29 @@ const ResultPage: React.FC = () => {
   const correct = parseInt(router.params.correct as string) || 0;
   const total = parseInt(router.params.total as string) || 0;
 
+  const { getWeakKnowledge, currentLevelAnswers, levels } = useLearning();
   const [level, setLevel] = useState(getLevelById(levelId));
   const [nextLevel, setNextLevel] = useState(getNextLevel(levelId));
 
   const wrong = total - correct;
   const isPassed = level ? score >= level.passingScore : false;
   const grade = calculateGrade(score);
-
   const scoreVariant = isPassed ? (score >= 90 ? 'success' : 'warning') : 'danger';
 
+  const weakKnowledge = useMemo(() => {
+    return getWeakKnowledge();
+  }, [getWeakKnowledge, currentLevelAnswers]);
+
   useEffect(() => {
-    setLevel(getLevelById(levelId));
-    setNextLevel(getNextLevel(levelId));
-    console.log('[Result] Level:', levelId, 'Score:', score, 'Passed:', isPassed);
-  }, [levelId, score, isPassed]);
+    const lv = levels.find(l => l.id === levelId) || getLevelById(levelId);
+    const next = levels.find((_, idx) => {
+      const currentIdx = levels.findIndex(l => l.id === levelId);
+      return idx === currentIdx + 1;
+    }) || getNextLevel(levelId);
+    setLevel(lv);
+    setNextLevel(next);
+    console.log('[Result] Weak knowledge:', weakKnowledge);
+  }, [levelId, levels, weakKnowledge]);
 
   const handleRetry = () => {
     Taro.redirectTo({ url: `/pages/level-detail/index?levelId=${levelId}` });
@@ -52,6 +64,12 @@ const ResultPage: React.FC = () => {
 
   const handleViewMistakes = () => {
     Taro.switchTab({ url: '/pages/mistakes/index' });
+  };
+
+  const handleViewCategoryMistakes = (category: KnowledgeCategory) => {
+    Taro.switchTab({
+      url: `/pages/mistakes/index?category=${category}`
+    });
   };
 
   if (!level) {
@@ -113,6 +131,38 @@ const ResultPage: React.FC = () => {
             </View>
           </View>
         </View>
+
+        {weakKnowledge.length > 0 && (
+          <View className={styles.weakSection}>
+            <Text className={styles.detailTitle} style={{ marginTop: '16rpx' }}>
+              薄弱知识点
+            </Text>
+            <Text className={styles.weakDesc}>
+              以下知识点错误率较高，建议重点复习：
+            </Text>
+            <View className={styles.weakList}>
+              {weakKnowledge.slice(0, 5).map(wk => {
+                const catInfo = CATEGORY_KNOWLEDGE.find(c => c.key === wk.category);
+                return (
+                  <View
+                    key={wk.category}
+                    className={styles.weakItem}
+                    onClick={() => handleViewCategoryMistakes(wk.category)}
+                  >
+                    <View className={styles.weakItemLeft}>
+                      <KnowledgeTag category={wk.category} variant="warning" />
+                      <Text className={styles.weakItemName}>{catInfo?.name}</Text>
+                    </View>
+                    <View className={styles.weakItemRight}>
+                      <Text className={styles.weakErrorRate}>错误率 {wk.errorRate}%</Text>
+                      <Text className={styles.weakGoReview}>去复习 →</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {isPassed && nextLevel && (
           <View className={styles.unlockHint}>

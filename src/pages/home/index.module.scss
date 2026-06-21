@@ -81,6 +81,22 @@
   padding: 0 $page-padding;
 }
 
+.nextLevelHint {
+  margin: $spacing-md $page-padding;
+  padding: $spacing-lg;
+  background: $color-warning-bg;
+  border-radius: $radius-lg;
+  border-left: 4rpx solid $color-warning;
+  display: flex;
+  align-items: center;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
 .quickActions {
   padding: 0 $page-padding;
   display: grid;

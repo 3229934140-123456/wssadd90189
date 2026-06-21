@@ -23,6 +23,25 @@
   opacity: 0.9;
 }
 
+.filterActiveHint {
+  margin-top: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-white;
+}
+
+.clearFilter {
+  margin-top: $spacing-sm;
+  text-align: right;
+}
+
+.clearFilterText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}
+
 .statsBar {
   display: flex;
   margin: $spacing-lg $page-padding;

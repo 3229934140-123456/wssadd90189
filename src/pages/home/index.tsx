@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
@@ -6,20 +6,39 @@ import { useLearning } from '@/store/LearningContext';
 import StatCard from '@/components/StatCard';
 import LevelCard from '@/components/LevelCard';
 import ProgressBar from '@/components/ProgressBar';
-import { LEVELS } from '@/data/levels';
-import { COMPANY_OVERALL_STATS } from '@/data/userStats';
 import { calculateGrade, getGradeColor } from '@/utils';
 
 const HomePage: React.FC = () => {
-  const { userProgress, mistakes } = useLearning();
+  const { userProgress, mistakes, levels, getRealDepartmentStats } = useLearning();
 
   const accuracy = userProgress.totalAnswered > 0
     ? Math.round((userProgress.totalCorrect / userProgress.totalAnswered) * 100)
     : 0;
 
-  const currentGrade = calculateGrade(userProgress.totalScore > 0 ? (userProgress.totalScore / (userProgress.totalAnswered * 20)) * 100 : 0);
+  const overallPercent = userProgress.totalAnswered > 0
+    ? Math.round((userProgress.totalScore / (userProgress.totalAnswered * 20)) * 100)
+    : 0;
+
+  const currentGrade = calculateGrade(overallPercent);
+
+  const progressPercent = levels.length > 0
+    ? Math.round((userProgress.completedLevels.length / levels.length) * 100)
+    : 0;
+
+  const allAvgCompletion = useMemo(() => {
+    const realStats = getRealDepartmentStats();
+    const totalAnswered = Object.values(realStats).reduce((sum: number, dept: any) => sum + (dept.totalAnswered || 0), 0);
+    const totalCorrect = Object.values(realStats).reduce((sum: number, dept: any) => sum + (dept.totalCorrect || 0), 0);
+    if (totalAnswered === 0) return 65;
+    return Math.round((totalCorrect / totalAnswered) * 100);
+  }, [getRealDepartmentStats]);
 
   const handleLevelClick = (levelId: string) => {
+    const level = levels.find(l => l.id === levelId);
+    if (!level || level.locked) {
+      Taro.showToast({ title: '请先完成上一关卡', icon: 'none' });
+      return;
+    }
     Taro.navigateTo({ url: `/pages/level-detail/index?levelId=${levelId}` });
   };
 
@@ -40,6 +59,10 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const nextUnlockedLevel = useMemo(() => {
+    return levels.find(l => !l.completed && !l.locked);
+  }, [levels]);
+
   return (
     <ScrollView scrollY className={styles.container}>
       <View className={styles.headerSection}>
@@ -48,6 +71,13 @@ const HomePage: React.FC = () => {
         <Text className={styles.userDept}>
           {userProgress.department} · 应对等级 <Text style={{ color: getGradeColor(currentGrade), fontWeight: '600' }}>{currentGrade}</Text>
         </Text>
+        {userProgress.completedLevels.length > 0 && (
+          <View style={{ marginTop: '16rpx', padding: '12rpx 20rpx', background: 'rgba(255,255,255,0.15)', borderRadius: '24rpx' }}>
+            <Text style={{ fontSize: '24rpx', color: '#fff' }}>
+              ✓ 已通关 {userProgress.completedLevels.length}/{levels.length} 关
+            </Text>
+          </View>
+        )}
       </View>
 
       <View className={styles.statsRow}>
@@ -67,27 +97,41 @@ const HomePage: React.FC = () => {
         <View className={styles.progressHeader}>
           <Text className={styles.progressTitle}>我的学习进度</Text>
           <Text className={styles.progressValue}>
-            {Math.round((userProgress.completedLevels.length / LEVELS.length) * 100)}%
+            {progressPercent}%
           </Text>
         </View>
         <View className={styles.progressItem}>
           <View className={styles.progressItemLabel}>
             <Text className={styles.progressItemText}>整体通关进度</Text>
             <Text className={styles.progressItemPercent}>
-              {userProgress.completedLevels.length}/{LEVELS.length} 关
+              {userProgress.completedLevels.length}/{levels.length} 关
             </Text>
           </View>
-          <ProgressBar percent={(userProgress.completedLevels.length / LEVELS.length) * 100} variant="primary" />
+          <ProgressBar percent={progressPercent} variant="primary" />
         </View>
         <View style={{ height: '24rpx' }} />
         <View className={styles.progressItem}>
           <View className={styles.progressItemLabel}>
             <Text className={styles.progressItemText}>全员平均进度</Text>
-            <Text className={styles.progressItemPercent}>{COMPANY_OVERALL_STATS.overallCompletionRate}%</Text>
+            <Text className={styles.progressItemPercent}>{allAvgCompletion}%</Text>
           </View>
-          <ProgressBar percent={COMPANY_OVERALL_STATS.overallCompletionRate} variant="info" />
+          <ProgressBar percent={allAvgCompletion} variant="info" />
         </View>
       </View>
+
+      {nextUnlockedLevel && (
+        <View className={styles.nextLevelHint} onClick={() => handleLevelClick(nextUnlockedLevel.id)}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: '26rpx', color: '#F59E0B', fontWeight: '600', marginBottom: '4rpx' }}>
+              🎯 继续挑战
+            </Text>
+            <Text style={{ fontSize: '28rpx', color: '#0F172A', fontWeight: '600' }}>
+              下一关：{nextUnlockedLevel.title}
+            </Text>
+          </View>
+          <Text style={{ fontSize: '26rpx', color: '#1E40AF', fontWeight: '500' }}>开始 →</Text>
+        </View>
+      )}
 
       <View className={styles.quickActions}>
         <View className={styles.quickActionCard} onClick={() => handleQuickAction('challenge')}>
@@ -120,7 +164,7 @@ const HomePage: React.FC = () => {
       </View>
 
       <View className={styles.recentLevels}>
-        {LEVELS.slice(0, 3).map(level => (
+        {levels.slice(0, 3).map(level => (
           <LevelCard
             key={level.id}
             level={level}

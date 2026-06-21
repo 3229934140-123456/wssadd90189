@@ -3,77 +3,413 @@
 .container {
   min-height: 100vh;
   background: $color-bg-page;
-  padding: $spacing-xl $page-padding;
+  padding-bottom: 48rpx;
 }
 
-.placeholderCard {
+.header {
+  background: linear-gradient(135deg, $color-primary-dark 0%, $color-primary 100%);
+  padding: $spacing-xl $page-padding;
+  color: $color-text-white;
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.headerDesc {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+}
+
+.tabs {
+  display: flex;
+  padding: $spacing-md $page-padding 0;
+  gap: $spacing-md;
+  background: linear-gradient(180deg, $color-primary 0%, $color-bg-page 100%);
+}
+
+.tab {
+  flex: 1;
+  padding: 20rpx 0;
+  text-align: center;
+  background: $color-bg-card;
+  border-radius: $radius-md $radius-md 0 0;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-bg-card;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    box-shadow: 0 -4rpx 12rpx rgba(0, 0, 0, 0.08);
+  }
+}
+
+.content {
+  padding: $spacing-lg $page-padding;
+}
+
+.addButton {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-lg;
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+.questionList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.questionItem {
   background: $color-bg-card;
   border-radius: $radius-lg;
-  padding: $spacing-xl * 2;
+  padding: $spacing-lg;
   box-shadow: $shadow-card;
-  text-align: center;
-  margin-top: 20%;
+  position: relative;
 }
 
-.placeholderIcon {
-  font-size: 120rpx;
+.questionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.questionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+  margin-right: $spacing-md;
+}
+
+.questionActions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.actionBtn {
+  @include button-reset;
+  padding: 8rpx 20rpx;
+  height: auto;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+
+  &.edit {
+    background: $color-primary-bg;
+    color: $color-primary;
+  }
+
+  &.delete {
+    background: $color-error-bg;
+    color: $color-error;
+  }
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.questionScenario {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  margin-bottom: $spacing-md;
+  @include text-ellipsis-multi(2);
+}
+
+.questionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.metaTag {
+  font-size: $font-size-xs;
+  padding: 6rpx 14rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+
+  &.level {
+    background: $color-primary-bg;
+    color: $color-primary;
+  }
+
+  &.dept {
+    background: $color-success-bg;
+    color: $color-success;
+  }
+
+  &.category {
+    background: $color-warning-bg;
+    color: $color-warning;
+  }
+}
+
+.emptyState {
+  padding: $spacing-xl * 2;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 100rpx;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+}
+
+.modalContent {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  padding: $spacing-lg;
+  border-bottom: 1rpx solid $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  font-size: 40rpx;
+  color: $color-text-tertiary;
+  padding: $spacing-xs;
+}
+
+.modalBody {
+  padding: $spacing-lg;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.formGroup {
   margin-bottom: $spacing-lg;
 }
 
-.placeholderTitle {
-  font-size: $font-size-xl;
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.formInput {
+  width: 100%;
+  padding: 20rpx 24rpx;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  background: $color-bg-card;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+  }
+}
+
+.formTextarea {
+  min-height: 160rpx;
+  line-height: $line-height-loose;
+}
+
+.optionGroup {
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  position: relative;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.optionLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.optionSettings {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+}
+
+.settingLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.pickerGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.pickerItem {
+  padding: 12rpx 24rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  background: $color-bg-card;
+  color: $color-text-secondary;
+  border: 2rpx solid $color-border;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary-bg;
+    color: $color-primary;
+    border-color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &.correct {
+    background: $color-success-bg;
+    color: $color-success;
+    border-color: $color-success;
+  }
+}
+
+.riskPicker {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.riskItem {
+  padding: 8rpx 16rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  border: 2rpx solid $color-border;
+
+  &.high {
+    &.active {
+      background: $color-error-bg;
+      color: $color-error;
+      border-color: $color-error;
+    }
+  }
+
+  &.medium {
+    &.active {
+      background: $color-warning-bg;
+      color: $color-warning;
+      border-color: $color-warning;
+    }
+  }
+
+  &.low {
+    &.active {
+      background: $color-success-bg;
+      color: $color-success;
+      border-color: $color-success;
+    }
+  }
+}
+
+.modalFooter {
+  padding: $spacing-md $spacing-lg;
+  border-top: 1rpx solid $color-divider;
+  display: flex;
+  gap: $spacing-md;
+}
+
+.footerBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+
+  &.primary {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+  }
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+.helpText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+  line-height: $line-height-tight;
+}
+
+.sectionCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
   margin-bottom: $spacing-sm;
 }
 
-.placeholderDesc {
-  font-size: $font-size-md;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  margin-bottom: $spacing-xl;
-}
-
-.featureList {
-  text-align: left;
-  background: $color-bg-hover;
-  border-radius: $radius-md;
-  padding: $spacing-lg;
-}
-
-.featureItem {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: $spacing-md;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.featureCheck {
-  font-size: 28rpx;
-  color: $color-primary;
-  margin-right: $spacing-sm;
-}
-
-.featureText {
+.sectionDesc {
   font-size: $font-size-sm;
   color: $color-text-secondary;
-  line-height: $line-height-normal;
-}
-
-.backBtn {
-  @include button-reset;
-  width: 100%;
-  height: $button-height-md;
-  border-radius: $radius-button;
-  font-size: $font-size-md;
-  background: $color-primary;
-  color: $color-text-white;
-  margin-top: $spacing-xl;
-
-  &:active {
-    opacity: 0.8;
-  }
+  line-height: $line-height-loose;
 }
