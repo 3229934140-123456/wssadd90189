@@ -36,6 +36,60 @@
   margin-bottom: $spacing-lg;
 }
 
+.taskSection {
+  padding: 0 $page-padding;
+  margin-bottom: $spacing-lg;
+}
+
+.taskTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.taskCard {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  border: 2rpx solid $color-border;
+  box-shadow: $shadow-card;
+}
+
+.taskCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-xs;
+}
+
+.taskCardTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.taskCardDeadline {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  flex-shrink: 0;
+  margin-left: $spacing-sm;
+}
+
+.taskCardDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.taskLevelTag {
+  padding: 8rpx 16rpx;
+  background: $color-primary-bg;
+  border-radius: $radius-sm;
+}
+
 .noticeCard {
   margin: 0 $page-padding $spacing-lg;
   background: $color-warning-bg;

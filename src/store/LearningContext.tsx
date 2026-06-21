@@ -8,7 +8,9 @@ import {
   QuestionOption,
   Level,
   DepartmentType,
-  KnowledgeCategory
+  KnowledgeCategory,
+  TrainingTask,
+  ReviewRecord
 } from '@/types';
 import { QUESTIONS as DEFAULT_QUESTIONS } from '@/data/questions';
 import { LEVELS as DEFAULT_LEVELS } from '@/data/levels';
@@ -25,6 +27,8 @@ interface LearningContextType {
   levels: Level[];
   currentVersion: DepartmentType;
   currentLevelAnswers: { questionId: string; isCorrect: boolean; category: KnowledgeCategory }[];
+  trainingTasks: TrainingTask[];
+  reviewRecords: ReviewRecord[];
 
   setCurrentLevel: (levelId: string) => void;
   submitAnswer: (question: Question, selectedOption: QuestionOption) => boolean;
@@ -45,6 +49,15 @@ interface LearningContextType {
   getWeakKnowledge: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
   getWeakKnowledgeFromSession: () => { category: KnowledgeCategory; errorCount: number; errorRate: number }[];
   getRealDepartmentStats: () => any;
+
+  addTrainingTask: (task: TrainingTask) => void;
+  deleteTrainingTask: (taskId: string) => void;
+  getActiveTasksForVersion: (version: DepartmentType) => TrainingTask[];
+  getTaskLevels: (taskId: string) => string[];
+  isLevelInAnyTask: (levelId: string, version: DepartmentType) => boolean;
+
+  recordReview: (questionId: string, category: KnowledgeCategory, mastered: boolean) => void;
+  getReviewRecord: (questionId: string) => ReviewRecord | undefined;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -73,6 +86,14 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [currentVersion, setCurrentVersionState] = useState<DepartmentType>(() => {
     return storage.getCurrentVersion();
+  });
+
+  const [trainingTasks, setTrainingTasks] = useState<TrainingTask[]>(() => {
+    return storage.getTrainingTasks();
+  });
+
+  const [reviewRecords, setReviewRecords] = useState<ReviewRecord[]>(() => {
+    return storage.getReviewRecords();
   });
 
   const [currentLevelId, setCurrentLevelIdState] = useState<string | null>(null);
@@ -107,6 +128,16 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     storage.setCurrentVersion(currentVersion);
   }, [currentVersion]);
+
+  useEffect(() => {
+    if (trainingTasks.length >= 0) {
+      storage.setTrainingTasks(trainingTasks);
+    }
+  }, [trainingTasks]);
+
+  useEffect(() => {
+    storage.setReviewRecords(reviewRecords);
+  }, [reviewRecords]);
 
   const setCurrentLevel = useCallback((levelId: string) => {
     setCurrentLevelIdState(levelId);
@@ -358,6 +389,47 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
     return baseStats;
   }, []);
 
+  const addTrainingTask = useCallback((task: TrainingTask) => {
+    setTrainingTasks(prev => [task, ...prev]);
+    console.log('[Learning] Training task added:', task.id);
+  }, []);
+
+  const deleteTrainingTask = useCallback((taskId: string) => {
+    setTrainingTasks(prev => prev.filter(t => t.id !== taskId));
+    console.log('[Learning] Training task deleted:', taskId);
+  }, []);
+
+  const getActiveTasksForVersion = useCallback((version: DepartmentType): TrainingTask[] => {
+    const now = Date.now();
+    return trainingTasks.filter(t =>
+      (t.departments.includes(version) || t.departments.includes('all')) &&
+      t.deadline > now
+    );
+  }, [trainingTasks]);
+
+  const getTaskLevels = useCallback((taskId: string): string[] => {
+    const task = trainingTasks.find(t => t.id === taskId);
+    return task ? task.levelIds : [];
+  }, [trainingTasks]);
+
+  const isLevelInAnyTask = useCallback((levelId: string, version: DepartmentType): boolean => {
+    const now = Date.now();
+    return trainingTasks.some(t =>
+      t.levelIds.includes(levelId) &&
+      (t.departments.includes(version) || t.departments.includes('all')) &&
+      t.deadline > now
+    );
+  }, [trainingTasks]);
+
+  const recordReview = useCallback((questionId: string, category: KnowledgeCategory, mastered: boolean) => {
+    storage.recordReview(questionId, category, mastered);
+    setReviewRecords(() => storage.getReviewRecords());
+  }, []);
+
+  const getReviewRecord = useCallback((questionId: string): ReviewRecord | undefined => {
+    return reviewRecords.find(r => r.questionId === questionId);
+  }, [reviewRecords]);
+
   return (
     <LearningContext.Provider value={{
       userProgress,
@@ -369,6 +441,8 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       levels,
       currentVersion,
       currentLevelAnswers,
+      trainingTasks,
+      reviewRecords,
       setCurrentLevel,
       submitAnswer,
       nextQuestion,
@@ -384,7 +458,14 @@ export const LearningProvider: React.FC<{ children: ReactNode }> = ({ children }
       deleteQuestion,
       getWeakKnowledge,
       getWeakKnowledgeFromSession,
-      getRealDepartmentStats
+      getRealDepartmentStats,
+      addTrainingTask,
+      deleteTrainingTask,
+      getActiveTasksForVersion,
+      getTaskLevels,
+      isLevelInAnyTask,
+      recordReview,
+      getReviewRecord
     }}>
       {children}
     </LearningContext.Provider>

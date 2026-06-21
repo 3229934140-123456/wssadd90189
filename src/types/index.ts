@@ -89,6 +89,26 @@ export interface CategoryKnowledge {
   description: string;
 }
 
+export interface TrainingTask {
+  id: string;
+  title: string;
+  description: string;
+  departments: DepartmentType[];
+  levelIds: string[];
+  deadline: number;
+  passingScore: number;
+  createdAt: number;
+  createdBy: string;
+}
+
+export interface ReviewRecord {
+  questionId: string;
+  category: KnowledgeCategory;
+  reviewCount: number;
+  lastMastered: boolean;
+  lastReviewTime: number;
+}
+
 export const CATEGORY_KNOWLEDGE: CategoryKnowledge[] = [
   { key: 'evidencePreservation', name: '证据保存', description: '涉及聊天记录、合同、票据等证据的固定与保全' },
   { key: 'regulatoryCommunication', name: '监管沟通', description: '与监管机构的沟通方式、话术和流程规范' },

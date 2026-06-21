@@ -67,6 +67,55 @@
   color: $color-text-secondary;
 }
 
+.taskTip {
+  margin: 0 $page-padding $spacing-lg;
+  background: $color-warning-bg;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border-left: 4rpx solid $color-warning;
+}
+
+.taskTipTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.taskTipItem {
+  margin-bottom: $spacing-sm;
+}
+
+.taskTipName {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.taskTipLevels {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.levelWrap {
+  position: relative;
+  margin-bottom: $spacing-md;
+}
+
+.taskBadge {
+  position: absolute;
+  top: -16rpx;
+  right: 16rpx;
+  background: $color-warning;
+  color: $color-text-white;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+  font-size: 22rpx;
+  z-index: 10;
+}
+
 .levelsList {
   padding: 0 $page-padding;
 }

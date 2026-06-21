@@ -11,21 +11,24 @@ import { formatTimestamp, getRiskLabel } from '@/utils';
 import { storage } from '@/utils/storage';
 
 const MistakesPage: React.FC = () => {
-  const { mistakes, markMistakeReviewed, getMistakeStats } = useLearning();
+  const { mistakes, markMistakeReviewed, getMistakeStats, recordReview, getReviewRecord } = useLearning();
   const [activeFilter, setActiveFilter] = useState<KnowledgeCategory | 'all'>('all');
   const [selectedMistake, setSelectedMistake] = useState<MistakeRecord | null>(null);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewQueue, setReviewQueue] = useState<MistakeRecord[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
   useDidShow(() => {
     const savedFilter = storage.getMistakesFilter();
     if (savedFilter && savedFilter !== 'all') {
       setActiveFilter(savedFilter as KnowledgeCategory);
     }
+    const tabAction = storage.getMistakesTabAction();
+    if (tabAction === 'startReview') {
+      storage.setMistakesTabAction('');
+      setTimeout(() => startReviewPlan(), 300);
+    }
   });
-
-  const handleFilterChange = (filter: KnowledgeCategory | 'all') => {
-    setActiveFilter(filter);
-    storage.setMistakesFilter(filter);
-  };
 
   const stats = useMemo(() => getMistakeStats(), [getMistakeStats]);
   const unreviewedCount = mistakes.filter(m => !m.reviewed).length;
@@ -34,6 +37,40 @@ const MistakesPage: React.FC = () => {
     if (activeFilter === 'all') return mistakes;
     return mistakes.filter(m => m.question.knowledgeCategory === activeFilter);
   }, [mistakes, activeFilter]);
+
+  const handleFilterChange = (filter: KnowledgeCategory | 'all') => {
+    setActiveFilter(filter);
+    storage.setMistakesFilter(filter);
+  };
+
+  const startReviewPlan = () => {
+    const source = activeFilter === 'all' ? mistakes : mistakes.filter(m => m.question.knowledgeCategory === activeFilter);
+    if (source.length === 0) return;
+    const sorted = [...source].sort((a, b) => {
+      const ra = getReviewRecord(a.question.id);
+      const rb = getReviewRecord(b.question.id);
+      const scoreA = (ra?.lastMastered ? 1 : 0) * 100 - (ra?.reviewCount || 0);
+      const scoreB = (rb?.lastMastered ? 1 : 0) * 100 - (rb?.reviewCount || 0);
+      return scoreA - scoreB;
+    });
+    setReviewQueue(sorted.slice(0, Math.min(5, sorted.length)));
+    setReviewIndex(0);
+    setReviewMode(true);
+  };
+
+  const handleReviewSubmit = (mastered: boolean) => {
+    const current = reviewQueue[reviewIndex];
+    if (current) {
+      recordReview(current.question.id, current.question.knowledgeCategory, mastered);
+    }
+    if (reviewIndex < reviewQueue.length - 1) {
+      setReviewIndex(reviewIndex + 1);
+    } else {
+      setReviewMode(false);
+      setReviewQueue([]);
+      setReviewIndex(0);
+    }
+  };
 
   const handleCloseDetail = () => {
     setSelectedMistake(null);
@@ -45,6 +82,96 @@ const MistakesPage: React.FC = () => {
       setSelectedMistake({ ...selectedMistake, reviewed: true });
     }
   };
+
+  if (reviewMode && reviewQueue.length > 0) {
+    const currentMistake = reviewQueue[reviewIndex];
+    const progress = Math.round(((reviewIndex + 1) / reviewQueue.length) * 100);
+    const reviewRec = getReviewRecord(currentMistake.question.id);
+    return (
+      <ScrollView scrollY className={styles.container}>
+        <View className={styles.reviewHeader}>
+          <View>
+            <Text className={styles.reviewTitle}>复习模式</Text>
+            <Text className={styles.reviewSubtitle}>第 {reviewIndex + 1} / {reviewQueue.length} 题</Text>
+          </View>
+          <View className={styles.reviewClose} onClick={() => { setReviewMode(false); setReviewQueue([]); }}>
+            <Text>退出</Text>
+          </View>
+        </View>
+        <View style={{ padding: '0 32rpx', marginBottom: '32rpx' }}>
+          <View style={{ height: '12rpx', background: '#E2E8F0', borderRadius: '6rpx', overflow: 'hidden' }}>
+            <View style={{ width: `${progress}%`, height: '100%', background: '#10B981', borderRadius: '6rpx', transition: 'width 0.3s' }} />
+          </View>
+        </View>
+        <View style={{ padding: '0 32rpx' }}>
+          {reviewRec && (
+            <View style={{ marginBottom: '16rpx', display: 'flex', gap: '12rpx' }}>
+              <Text style={{ fontSize: '24rpx', color: '#64748B', padding: '6rpx 12rpx', background: '#F1F5F9', borderRadius: '8rpx' }}>
+                已复习 {reviewRec.reviewCount} 次
+              </Text>
+              <Text style={{ fontSize: '24rpx', color: reviewRec.lastMastered ? '#10B981' : '#EF4444', padding: '6rpx 12rpx', background: reviewRec.lastMastered ? '#D1FAE5' : '#FEE2E2', borderRadius: '8rpx' }}>
+                上次：{reviewRec.lastMastered ? '已掌握' : '未掌握'}
+              </Text>
+            </View>
+          )}
+          <View className={styles.questionItem} style={{ marginBottom: '32rpx' }}>
+            <Text className={styles.questionTitle}>{currentMistake.question.title}</Text>
+            <View style={{ marginBottom: '16rpx' }}>
+              <KnowledgeTag category={currentMistake.question.knowledgeCategory} variant="warning" />
+            </View>
+            <Text className={styles.mistakeScenario}>{currentMistake.question.scenario}</Text>
+          </View>
+
+          <Text style={{ fontSize: '28rpx', fontWeight: '600', color: '#0F172A', marginBottom: '16rpx' }}>选项：</Text>
+          {currentMistake.question.options.map(opt => (
+            <View
+              key={opt.id}
+              className={styles.reviewOption}
+              style={{
+                background: opt.id === currentMistake.selectedOptionId
+                  ? '#FEF2F2'
+                  : opt.id === currentMistake.correctOptionId
+                    ? '#D1FAE5'
+                    : '#fff',
+                borderColor: opt.id === currentMistake.selectedOptionId
+                  ? '#EF4444'
+                  : opt.id === currentMistake.correctOptionId
+                    ? '#10B981'
+                    : '#E2E8F0'
+              }}
+            >
+              <Text style={{ fontWeight: '500', color: opt.id === currentMistake.correctOptionId ? '#065F46' : '#1E293B' }}>
+                {opt.id === currentMistake.correctOptionId ? '✓ ' : opt.id === currentMistake.selectedOptionId ? '✗ ' : ''}{opt.text}
+              </Text>
+            </View>
+          ))}
+
+          <Text style={{ fontSize: '28rpx', fontWeight: '600', color: '#0F172A', margin: '32rpx 0 16rpx' }}>风险解释：</Text>
+          <Text style={{ fontSize: '26rpx', color: '#475569', lineHeight: 1.6, padding: '16rpx', background: '#FEF2F2', borderRadius: '12rpx', marginBottom: '32rpx' }}>
+            {currentMistake.question.options.find(o => o.id === currentMistake.selectedOptionId)?.riskExplanation || ''}
+          </Text>
+
+          <Text style={{ fontSize: '28rpx', fontWeight: '600', color: '#0F172A', marginBottom: '24rpx' }}>你掌握这道题了吗？</Text>
+          <View style={{ display: 'flex', gap: '16rpx' }}>
+            <Button
+              className={classnames(styles.actionBtn, styles.danger)}
+              style={{ flex: 1 }}
+              onClick={() => handleReviewSubmit(false)}
+            >
+              还没掌握
+            </Button>
+            <Button
+              className={classnames(styles.actionBtn, styles.success)}
+              style={{ flex: 1 }}
+              onClick={() => handleReviewSubmit(true)}
+            >
+              已掌握
+            </Button>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView scrollY className={styles.container}>
@@ -63,6 +190,18 @@ const MistakesPage: React.FC = () => {
         <StatCard value={unreviewedCount} label="待复习" unit="道" color="warning" />
         <StatCard value={Object.keys(stats).length} label="薄弱知识点" unit="个" color="primary" />
       </View>
+
+      {mistakes.length > 0 && (
+        <View style={{ padding: '0 32rpx', marginBottom: '24rpx' }}>
+          <Button
+            className={classnames(styles.actionBtn, styles.primary)}
+            onClick={startReviewPlan}
+            style={{ width: '100%', margin: 0 }}
+          >
+            🎯 生成复习计划（{activeFilter === 'all' ? '全部' : CATEGORY_KNOWLEDGE.find(c => c.key === activeFilter)?.name}）
+          </Button>
+        </View>
+      )}
 
       <View className={styles.filterSection}>
         <Text className={styles.filterLabel}>按知识点筛选</Text>
@@ -109,14 +248,21 @@ const MistakesPage: React.FC = () => {
           </Text>
         </View>
       ) : (
-          filteredMistakes.map(mistake => (
-            <View key={mistake.question.id} className={styles.mistakeCard}>
+          filteredMistakes.map(mistake => {
+            const rec = getReviewRecord(mistake.question.id);
+            return (
+              <View key={mistake.question.id} className={styles.mistakeCard}>
               <View className={styles.mistakeHeader}>
                 <Text className={styles.mistakeTitle}>{mistake.question.title}</Text>
                 {mistake.reviewed && <Text className={styles.reviewedBadge}>已复习</Text>}
               </View>
               <View style={{ marginBottom: '16rpx' }}>
                 <KnowledgeTag category={mistake.question.knowledgeCategory} variant="danger" />
+                {rec && (
+                  <Text style={{ marginLeft: '12rpx', fontSize: '22rpx', color: '#64748B' }}>
+                    复习{rec.reviewCount}次 {rec.lastMastered ? '✓' : ''}
+                  </Text>
+                )}
               </View>
               <Text className={styles.mistakeScenario}>{mistake.question.scenario}</Text>
               <View className={styles.mistakeFooter}>
@@ -141,7 +287,8 @@ const MistakesPage: React.FC = () => {
                 </View>
               </View>
             </View>
-          ))
+            );
+          })
         )}
       </View>
 

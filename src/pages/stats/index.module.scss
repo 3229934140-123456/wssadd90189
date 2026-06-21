@@ -272,3 +272,21 @@
   font-weight: $font-weight-semibold;
   color: $color-error;
 }
+
+.taskHeader {
+  margin-bottom: $spacing-md;
+}
+
+.taskTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.taskSubtitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  display: block;
+}

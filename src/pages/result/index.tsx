@@ -69,6 +69,7 @@ const ResultPage: React.FC = () => {
 
   const handleViewCategoryMistakes = (category: KnowledgeCategory) => {
     storage.setMistakesFilter(category);
+    storage.setMistakesTabAction('startReview');
     Taro.switchTab({
       url: '/pages/mistakes/index'
     });

@@ -11,10 +11,12 @@ import {
   DepartmentType,
   KnowledgeCategory,
   CATEGORY_KNOWLEDGE,
-  DEPARTMENT_NAMES
+  DEPARTMENT_NAMES,
+  TrainingTask
 } from '@/types';
 import { LEVELS } from '@/data/levels';
 import { CASE_LIBRARY, CaseItem } from '@/data/cases';
+import { formatTimestamp } from '@/utils';
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 const riskLevels: { key: RiskLevel; label: string }[] = [
@@ -33,12 +35,28 @@ const emptyOption = (id: string): QuestionOption => ({
 });
 
 const AdminPage: React.FC = () => {
-  const { questions, levels, addQuestion, updateQuestion, deleteQuestion } = useLearning();
-  const [activeTab, setActiveTab] = useState<'list' | 'versions'>('list');
+  const { questions, levels, addQuestion, updateQuestion, deleteQuestion, trainingTasks, addTrainingTask, deleteTrainingTask } = useLearning();
+  const [activeTab, setActiveTab] = useState<'list' | 'versions' | 'tasks'>('list');
   const [filterLevel, setFilterLevel] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [showCasePicker, setShowCasePicker] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState<{
+    title: string;
+    description: string;
+    departments: DepartmentType[];
+    levelIds: string[];
+    deadline: number;
+    passingScore: number;
+  }>({
+    title: '',
+    description: '',
+    departments: ['all'],
+    levelIds: ['level1'],
+    deadline: Date.now() + 7 * 24 * 3600 * 1000,
+    passingScore: 80
+  });
 
   const [formData, setFormData] = useState<{
     id: string;
@@ -218,6 +236,12 @@ const AdminPage: React.FC = () => {
         >
           <Text>岗位版本</Text>
         </View>
+        <View
+          className={classnames(styles.tab, activeTab === 'tasks' && styles.active)}
+          onClick={() => setActiveTab('tasks')}
+        >
+          <Text>培训任务</Text>
+        </View>
       </View>
 
       <View className={styles.content}>
@@ -294,7 +318,7 @@ const AdminPage: React.FC = () => {
               </View>
             )}
           </>
-        ) : (
+        ) : activeTab === 'versions' ? (
           <>
             <View className={styles.sectionCard}>
               <Text className={styles.sectionTitle}>岗位版本说明</Text>
@@ -327,7 +351,82 @@ const AdminPage: React.FC = () => {
               );
             })}
           </>
-        )}
+        ) : activeTab === 'tasks' ? (
+          <>
+            <View className={styles.sectionCard}>
+              <Text className={styles.sectionTitle}>培训任务说明</Text>
+              <Text className={styles.sectionDesc}>
+                发布培训任务后，对应岗位的员工将在首页看到待办提醒，闯关页也会高亮显示任务中的关卡。
+              </Text>
+            </View>
+
+            <Button className={styles.addButton} onClick={() => {
+              setTaskForm({
+                title: '',
+                description: '',
+                departments: ['all'],
+                levelIds: [],
+                deadline: Date.now() + 7 * 24 * 3600 * 1000,
+                passingScore: 80
+              });
+              setShowTaskModal(true);
+            }}>
+              + 发布培训任务
+            </Button>
+
+            {trainingTasks.length === 0 ? (
+              <View className={styles.emptyState}>
+                <Text className={styles.emptyIcon}>📌</Text>
+                <Text className={styles.emptyText}>暂无培训任务，点击上方按钮发布</Text>
+              </View>
+            ) : (
+              <View className={styles.questionList}>
+                {trainingTasks.map(task => (
+                  <View key={task.id} className={styles.questionItem}>
+                    <View className={styles.questionHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text className={styles.questionTitle}>{task.title}</Text>
+                        {task.description && <Text style={{ fontSize: '24rpx', color: '#64748B', marginTop: '4rpx' }}>{task.description}</Text>}
+                      </View>
+                      <Button
+                        className={classnames(styles.actionBtn, styles.delete)}
+                        onClick={() => {
+                          Taro.showModal({
+                            title: '确认删除',
+                            content: `确定删除培训任务「${task.title}」吗？`,
+                            confirmColor: '#EF4444',
+                            success: (res) => { if (res.confirm) deleteTrainingTask(task.id); }
+                          });
+                        }}
+                      >
+                        删除
+                      </Button>
+                    </View>
+                    <View className={styles.questionMeta}>
+                      {task.departments.map(d => (
+                        <Text key={d} className={classnames(styles.metaTag, styles.dept)}>
+                          {DEPARTMENT_NAMES[d]}
+                        </Text>
+                      ))}
+                      <Text className={classnames(styles.metaTag, styles.level)}>
+                        {task.levelIds.length} 个关卡
+                      </Text>
+                      <Text className={classnames(styles.metaTag, styles.category)}>
+                        分数线 {task.passingScore}
+                      </Text>
+                      <Text className={styles.metaTag}>
+                        截止 {formatTimestamp(task.deadline).split(' ')[0]}
+                      </Text>
+                      {task.deadline < Date.now() && (
+                        <Text className={classnames(styles.metaTag)} style={{ color: '#EF4444' }}>已过期</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        ) : null}
       </View>
 
       {showModal && (
@@ -562,6 +661,171 @@ const AdminPage: React.FC = () => {
                 </View>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {showTaskModal && (
+        <View className={styles.modalOverlay} onClick={() => setShowTaskModal(false)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>发布培训任务</Text>
+              <Text className={styles.modalClose} onClick={() => setShowTaskModal(false)}>×</Text>
+            </View>
+            <ScrollView scrollY className={styles.modalBody}>
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>任务名称</Text>
+                <Input
+                  className={styles.formInput}
+                  placeholder="如：6月监管合规专项培训"
+                  value={taskForm.title}
+                  onInput={e => setTaskForm({ ...taskForm, title: e.detail.value })}
+                />
+              </View>
+
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>任务说明（可选）</Text>
+                <Textarea
+                  className={classnames(styles.formInput, styles.formTextarea)}
+                  placeholder="任务背景、注意事项等"
+                  value={taskForm.description}
+                  onInput={e => setTaskForm({ ...taskForm, description: e.detail.value })}
+                />
+              </View>
+
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>适用岗位</Text>
+                <View className={styles.pickerGroup}>
+                  {Object.entries(DEPARTMENT_NAMES).map(([key, name]) => (
+                    <View
+                      key={key}
+                      className={classnames(
+                        styles.pickerItem,
+                        taskForm.departments.includes(key as DepartmentType) && styles.active
+                      )}
+                      onClick={() => {
+                        const dept = key as DepartmentType;
+                        setTaskForm({
+                          ...taskForm,
+                          departments: taskForm.departments.includes(dept)
+                            ? taskForm.departments.filter(d => d !== dept)
+                            : [...taskForm.departments, dept]
+                        });
+                      }}
+                    >
+                      <Text>{taskForm.departments.includes(key as DepartmentType) ? '✓ ' : ''}{name}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>包含关卡</Text>
+                <View className={styles.pickerGroup}>
+                  {(levels.length > 0 ? levels : LEVELS).map(level => (
+                    <View
+                      key={level.id}
+                      className={classnames(
+                        styles.pickerItem,
+                        taskForm.levelIds.includes(level.id) && styles.active
+                      )}
+                      onClick={() => {
+                        setTaskForm({
+                          ...taskForm,
+                          levelIds: taskForm.levelIds.includes(level.id)
+                            ? taskForm.levelIds.filter(id => id !== level.id)
+                            : [...taskForm.levelIds, level.id]
+                        });
+                      }}
+                    >
+                      <Text>{taskForm.levelIds.includes(level.id) ? '✓ ' : ''}{level.title}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>通关分数线</Text>
+                <View className={styles.pickerGroup}>
+                  {[60, 70, 80, 90].map(score => (
+                    <View
+                      key={score}
+                      className={classnames(
+                        styles.pickerItem,
+                        taskForm.passingScore === score && styles.active
+                      )}
+                      onClick={() => setTaskForm({ ...taskForm, passingScore: score })}
+                    >
+                      <Text>{score} 分</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <Text className={styles.formLabel}>截止时间</Text>
+                <View className={styles.pickerGroup}>
+                  {[
+                    { label: '3天', days: 3 },
+                    { label: '7天', days: 7 },
+                    { label: '15天', days: 15 },
+                    { label: '30天', days: 30 }
+                  ].map(opt => {
+                    const deadlineCandidate = Date.now() + opt.days * 24 * 3600 * 1000;
+                    return (
+                      <View
+                        key={opt.days}
+                        className={classnames(
+                          styles.pickerItem,
+                          Math.abs(taskForm.deadline - deadlineCandidate) < 3600 * 1000 && styles.active
+                        )}
+                        onClick={() => setTaskForm({ ...taskForm, deadline: deadlineCandidate })}
+                      >
+                        <Text>{opt.label}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+            <View className={styles.modalFooter}>
+              <Button className={styles.footerBtn} onClick={() => setShowTaskModal(false)}>
+                取消
+              </Button>
+              <Button
+                className={classnames(styles.footerBtn, styles.primary)}
+                onClick={() => {
+                  if (!taskForm.title.trim()) {
+                    Taro.showToast({ title: '请输入任务名称', icon: 'none' });
+                    return;
+                  }
+                  if (taskForm.departments.length === 0) {
+                    Taro.showToast({ title: '请选择适用岗位', icon: 'none' });
+                    return;
+                  }
+                  if (taskForm.levelIds.length === 0) {
+                    Taro.showToast({ title: '请选择包含关卡', icon: 'none' });
+                    return;
+                  }
+                  const task: TrainingTask = {
+                    id: `task${Date.now()}`,
+                    title: taskForm.title,
+                    description: taskForm.description,
+                    departments: taskForm.departments,
+                    levelIds: taskForm.levelIds,
+                    deadline: taskForm.deadline,
+                    passingScore: taskForm.passingScore,
+                    createdAt: Date.now(),
+                    createdBy: '管理员'
+                  };
+                  addTrainingTask(task);
+                  setShowTaskModal(false);
+                  Taro.showToast({ title: '任务已发布', icon: 'success' });
+                }}
+              >
+                发布任务
+              </Button>
+            </View>
           </View>
         </View>
       )}

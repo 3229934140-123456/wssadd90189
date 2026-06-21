@@ -16,7 +16,9 @@ const versions: { key: DepartmentType; name: string }[] = [
 ];
 
 const ChallengePage: React.FC = () => {
-  const { levels, currentVersion, setCurrentVersion, getFilteredQuestions } = useLearning();
+  const { levels, currentVersion, setCurrentVersion, getFilteredQuestions, getActiveTasksForVersion, isLevelInAnyTask } = useLearning();
+
+  const activeTasks = useMemo(() => getActiveTasksForVersion(currentVersion), [getActiveTasksForVersion, currentVersion]);
 
   const handleLevelClick = (levelId: string) => {
     const level = levels.find(l => l.id === levelId);
@@ -50,9 +52,10 @@ const ChallengePage: React.FC = () => {
   const levelsWithQuestionCount = useMemo(() => {
     return levels.map(level => ({
       ...level,
-      questionCount: levelQuestionCounts[level.id] || level.questionCount
+      questionCount: levelQuestionCounts[level.id] || level.questionCount,
+      inTask: isLevelInAnyTask(level.id, currentVersion)
     }));
-  }, [levels, levelQuestionCounts]);
+  }, [levels, levelQuestionCounts, isLevelInAnyTask, currentVersion]);
 
   return (
     <ScrollView scrollY className={styles.container}>
@@ -82,13 +85,32 @@ const ChallengePage: React.FC = () => {
         <ProgressBar percent={progressPercent} variant="success" />
       </View>
 
+      {activeTasks.length > 0 && (
+        <View className={styles.taskTip}>
+          <Text className={styles.taskTipTitle}>📌 当前培训任务中的关卡</Text>
+          {activeTasks.map(task => (
+            <View key={task.id} className={styles.taskTipItem}>
+              <Text className={styles.taskTipName}>{task.title}</Text>
+              <Text className={styles.taskTipLevels}>
+                包含关卡：{task.levelIds.map(lid => {
+                  const lv = levels.find(l => l.id === lid);
+                  return lv ? lv.title : lid;
+                }).join('、')}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View className={styles.levelsList}>
         {levelsWithQuestionCount.map(level => (
-          <LevelCard
-            key={level.id}
-            level={level}
-            onClick={() => handleLevelClick(level.id)}
-          />
+          <View key={level.id} className={styles.levelWrap}>
+            {level.inTask && <View className={styles.taskBadge}><Text>📋 任务关卡</Text></View>}
+            <LevelCard
+              level={level}
+              onClick={() => handleLevelClick(level.id)}
+            />
+          </View>
         ))}
       </View>
     </ScrollView>

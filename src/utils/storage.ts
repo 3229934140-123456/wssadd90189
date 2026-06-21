@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro';
-import { Question, UserProgress, MistakeRecord, Level, DepartmentType } from '@/types';
+import { Question, UserProgress, MistakeRecord, Level, DepartmentType, TrainingTask, ReviewRecord } from '@/types';
 
 const STORAGE_KEYS = {
   QUESTIONS: 'compliance_questions',
@@ -9,7 +9,10 @@ const STORAGE_KEYS = {
   CURRENT_VERSION: 'compliance_current_version',
   MISTAKES_FILTER: 'compliance_mistakes_filter',
   DEPARTMENT_STATS: 'compliance_department_stats',
-  ANSWER_HISTORY: 'compliance_answer_history'
+  ANSWER_HISTORY: 'compliance_answer_history',
+  TRAINING_TASKS: 'compliance_training_tasks',
+  REVIEW_RECORDS: 'compliance_review_records',
+  MISTAKES_TAB_ACTION: 'compliance_mistakes_tab_action'
 };
 
 export const storage = {
@@ -317,6 +320,89 @@ export const storage = {
       return data ? JSON.parse(data) : [];
     } catch (e) {
       return [];
+    }
+  },
+
+  getTrainingTasks: (): TrainingTask[] => {
+    try {
+      const data = Taro.getStorageSync(STORAGE_KEYS.TRAINING_TASKS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('[Storage] getTrainingTasks error:', e);
+      return [];
+    }
+  },
+
+  setTrainingTasks: (tasks: TrainingTask[]): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.TRAINING_TASKS, JSON.stringify(tasks));
+    } catch (e) {
+      console.error('[Storage] setTrainingTasks error:', e);
+    }
+  },
+
+  addTrainingTask: (task: TrainingTask): void => {
+    const tasks = storage.getTrainingTasks();
+    storage.setTrainingTasks([task, ...tasks]);
+  },
+
+  deleteTrainingTask: (taskId: string): void => {
+    const tasks = storage.getTrainingTasks();
+    storage.setTrainingTasks(tasks.filter(t => t.id !== taskId));
+  },
+
+  getReviewRecords: (): ReviewRecord[] => {
+    try {
+      const data = Taro.getStorageSync(STORAGE_KEYS.REVIEW_RECORDS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('[Storage] getReviewRecords error:', e);
+      return [];
+    }
+  },
+
+  setReviewRecords: (records: ReviewRecord[]): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.REVIEW_RECORDS, JSON.stringify(records));
+    } catch (e) {
+      console.error('[Storage] setReviewRecords error:', e);
+    }
+  },
+
+  recordReview: (questionId: string, category: string, mastered: boolean): void => {
+    const records = storage.getReviewRecords();
+    const existing = records.find(r => r.questionId === questionId);
+    if (existing) {
+      const updated = records.map(r =>
+        r.questionId === questionId
+          ? { ...r, reviewCount: r.reviewCount + 1, lastMastered: mastered, lastReviewTime: Date.now() }
+          : r
+      );
+      storage.setReviewRecords(updated);
+    } else {
+      storage.setReviewRecords([{
+        questionId,
+        category: category as any,
+        reviewCount: 1,
+        lastMastered: mastered,
+        lastReviewTime: Date.now()
+      }, ...records]);
+    }
+  },
+
+  getMistakesTabAction: (): string => {
+    try {
+      return Taro.getStorageSync(STORAGE_KEYS.MISTAKES_TAB_ACTION) || '';
+    } catch (e) {
+      return '';
+    }
+  },
+
+  setMistakesTabAction: (action: string): void => {
+    try {
+      Taro.setStorageSync(STORAGE_KEYS.MISTAKES_TAB_ACTION, action);
+    } catch (e) {
+      console.error('[Storage] setMistakesTabAction error:', e);
     }
   },
 

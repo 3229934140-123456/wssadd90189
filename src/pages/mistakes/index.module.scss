@@ -162,6 +162,11 @@
     color: $color-success;
   }
 
+  &.danger {
+    background: $color-error-bg;
+    color: $color-error;
+  }
+
   &:active {
     opacity: 0.8;
   }
@@ -188,6 +193,57 @@
   font-size: $font-size-sm;
   color: $color-text-tertiary;
   line-height: $line-height-loose;
+}
+
+.reviewHeader {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $spacing-xl $page-padding;
+  color: $color-text-white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reviewTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.reviewSubtitle {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+}
+
+.reviewClose {
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+}
+
+.questionItem {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.questionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  line-height: $line-height-loose;
+}
+
+.reviewOption {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  border: 2rpx solid $color-border;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-sm;
 }
 
 .detailModal {

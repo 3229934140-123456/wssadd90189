@@ -7,9 +7,10 @@ import StatCard from '@/components/StatCard';
 import LevelCard from '@/components/LevelCard';
 import ProgressBar from '@/components/ProgressBar';
 import { calculateGrade, getGradeColor } from '@/utils';
+import { formatTimestamp } from '@/utils';
 
 const HomePage: React.FC = () => {
-  const { userProgress, mistakes, levels, getRealDepartmentStats } = useLearning();
+  const { userProgress, mistakes, levels, getRealDepartmentStats, currentVersion, getActiveTasksForVersion } = useLearning();
 
   const accuracy = userProgress.totalAnswered > 0
     ? Math.round((userProgress.totalCorrect / userProgress.totalAnswered) * 100)
@@ -29,9 +30,11 @@ const HomePage: React.FC = () => {
     const realStats = getRealDepartmentStats() as { [key: string]: { totalAnswered: number; totalCorrect: number } };
     const totalAnswered = Object.values(realStats).reduce((sum, dept) => sum + (dept.totalAnswered || 0), 0);
     const totalCorrect = Object.values(realStats).reduce((sum, dept) => sum + (dept.totalCorrect || 0), 0);
-    if (totalAnswered === 0) return 65;
+    if (totalAnswered === 0) return 0;
     return Math.round((totalCorrect / totalAnswered) * 100);
   }, [getRealDepartmentStats]);
+
+  const activeTasks = useMemo(() => getActiveTasksForVersion(currentVersion), [getActiveTasksForVersion, currentVersion]);
 
   const handleLevelClick = (levelId: string) => {
     const level = levels.find(l => l.id === levelId);
@@ -85,6 +88,52 @@ const HomePage: React.FC = () => {
         <StatCard value={accuracy} label="正确率" unit="%" color="success" />
         <StatCard value={mistakes.length} label="错题数" unit="道" color="warning" />
       </View>
+
+      {activeTasks.length > 0 && (
+        <View className={styles.taskSection}>
+          <Text className={styles.taskTitle}>📌 待完成培训任务</Text>
+          {activeTasks.map(task => {
+            const completedCount = task.levelIds.filter(id => userProgress.completedLevels.includes(id)).length;
+            const pct = Math.round((completedCount / task.levelIds.length) * 100);
+            return (
+              <View key={task.id} className={styles.taskCard}>
+                <View className={styles.taskCardHeader}>
+                  <Text className={styles.taskCardTitle}>{task.title}</Text>
+                  <Text className={styles.taskCardDeadline}>截止 {formatTimestamp(task.deadline).split(' ')[0]}</Text>
+                </View>
+                {task.description && <Text className={styles.taskCardDesc}>{task.description}</Text>}
+                <View style={{ marginTop: '16rpx' }}>
+                  <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#64748B' }}>
+                      进度 {completedCount}/{task.levelIds.length}
+                    </Text>
+                    <Text style={{ fontSize: '24rpx', color: '#1E40AF', fontWeight: '500' }}>{pct}%</Text>
+                  </View>
+                  <ProgressBar percent={pct} variant="success" />
+                </View>
+                <View style={{ marginTop: '16rpx', display: 'flex', gap: '12rpx', flexWrap: 'wrap' }}>
+                  {task.levelIds.map(lid => {
+                    const lv = levels.find(l => l.id === lid);
+                    const done = userProgress.completedLevels.includes(lid);
+                    return (
+                      <View
+                        key={lid}
+                        className={styles.taskLevelTag}
+                        style={{ opacity: done ? 1 : 0.7 }}
+                        onClick={() => lv && lv.unlocked && Taro.navigateTo({ url: `/pages/level-detail/index?levelId=${lid}` })}
+                      >
+                        <Text style={{ color: done ? '#10B981' : lv?.unlocked ? '#1E40AF' : '#94A3B8', fontSize: '24rpx' }}>
+                          {done ? '✓ ' : lv?.unlocked ? '' : '🔒 '}{lv?.title || lid}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       <View className={styles.noticeCard}>
         <Text className={styles.noticeIcon}>📢</Text>
